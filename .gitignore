@@ -1,0 +1,18 @@
+# generated artifacts
+*_bulk.ndjson
+*_mapping.json
+*_catalog.json
+enriched_*.json
+embedder.pkl
+wine_raw.csv
+profiles.csv
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# os
+.DS_Store
