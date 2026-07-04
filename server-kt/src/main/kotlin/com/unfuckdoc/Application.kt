@@ -1,6 +1,7 @@
 package com.unfuckdoc
 
-import com.unfuckdoc.di.appModule
+import com.google.inject.Guice
+import com.unfuckdoc.di.AppModule
 import com.unfuckdoc.routes.registerRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -12,16 +13,11 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import kotlinx.serialization.json.Json
-import org.koin.ktor.plugin.Koin
-import org.koin.logger.slf4jLogger
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
+    val injector = Guice.createInjector(AppModule())
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
-        install(Koin) {
-            slf4jLogger()
-            modules(appModule)
-        }
         install(ContentNegotiation) {
             json(Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false })
         }
@@ -31,7 +27,7 @@ fun main() {
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (cause.message ?: "internal error")))
             }
         }
-        registerRoutes()
-        println("unfuckdoc-kt (Ktor + Koin) → http://localhost:$port")
+        registerRoutes(injector)
+        println("unfuckdoc-kt (Ktor + Guice) → http://localhost:$port")
     }.start(wait = true)
 }

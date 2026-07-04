@@ -17,17 +17,17 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
-import org.koin.ktor.ext.inject
+import com.google.inject.Injector
 import java.io.File
 
 private fun slug(filename: String): String =
     "kt_" + filename.substringBeforeLast('.').lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_').take(40)
 
-fun Application.registerRoutes() {
-    val pipeline by inject<Pipeline>()
-    val csv by inject<CsvReader>()
-    val indexBuilder by inject<IndexBuilder>()
-    val opensearch by inject<OpenSearchService>()
+fun Application.registerRoutes(injector: Injector) {
+    val pipeline = injector.getInstance(Pipeline::class.java)
+    val csv = injector.getInstance(CsvReader::class.java)
+    val indexBuilder = injector.getInstance(IndexBuilder::class.java)
+    val opensearch = injector.getInstance(OpenSearchService::class.java)
     val dataDir = File(System.getenv("DATA_DIR") ?: "../data").canonicalFile
 
     fun readCsv(sample: String?, body: String): Pair<List<String>, List<Map<String, String?>>>? {

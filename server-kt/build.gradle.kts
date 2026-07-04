@@ -10,7 +10,6 @@ version = "0.1.0"
 repositories { mavenCentral() }
 
 val ktor = "3.0.3"
-val koin = "4.0.0"
 
 dependencies {
     // Ktor server (Netty) + JSON content negotiation
@@ -21,9 +20,8 @@ dependencies {
     implementation("io.ktor:ktor-server-call-logging:$ktor")
     implementation("io.ktor:ktor-server-status-pages:$ktor")
 
-    // Koin DI (Ktor integration)
-    implementation("io.insert-koin:koin-ktor:$koin")
-    implementation("io.insert-koin:koin-logger-slf4j:$koin")
+    // Google Guice DI
+    implementation("com.google.inject:guice:7.0.0")
 
     // OpenSearch official Java client (+ Apache HttpClient5 transport)
     implementation("org.opensearch.client:opensearch-java:2.12.0")

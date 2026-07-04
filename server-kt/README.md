@@ -1,7 +1,7 @@
-# unfuckdoc-kt — Kotlin / Ktor / Koin exploration
+# unfuckdoc-kt — Kotlin / Ktor / Guice exploration
 
 A spike porting the **deterministic core** of the pipeline to Kotlin, to feel the ergonomics of a
-JVM backend (Ktor server + Koin DI). Java 21, Gradle wrapper, no external services.
+JVM backend (Ktor server + Guice DI). Java 21, Gradle wrapper, no external services.
 
 ## What's ported (and verified byte-identical to the Python pipeline)
 
@@ -50,10 +50,11 @@ curl -X POST http://localhost:8080/api/process --data-binary @my.csv  # or a raw
 ## Layout
 
 ```
-build.gradle.kts                 Ktor 3 + Koin 4 + kotlinx.serialization + commons-csv
+build.gradle.kts                 Ktor 3 + Guice 7 + opensearch-java + kotlinx.serialization + commons-csv
 src/main/kotlin/com/unfuckdoc/
-  Application.kt                 embeddedServer(Netty) + plugins (Koin, ContentNegotiation, ...)
-  di/AppModule.kt                Koin module — pipeline as a graph of singletons
-  domain/                        Classifier, Canonicalizer, Pipeline, CsvReader, Models
-  routes/Routes.kt               /health, /api/samples, /api/process
+  Application.kt                 embeddedServer(Netty) + Guice injector + plugins (ContentNegotiation, ...)
+  di/AppModule.kt                Guice module (@Provides singletons) — pipeline graph
+  domain/                        Classifier, Canonicalizer, Pipeline, IndexBuilder, Dsl, CsvReader, Models
+  opensearch/OpenSearchService   opensearch-java client (index + search)
+  routes/Routes.kt               /health, /api/samples, /api/process, /api/index, /api/search
 ```
