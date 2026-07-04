@@ -23,8 +23,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const p = url.searchParams;
   const [detail, samples] = await Promise.all([api.collection(params.name), api.samples()]);
   const filters = parseFilters(p);
-  const hasQuery = p.get("q") || filters.length > 0;
-  const search = hasQuery
+  // empty search is match-any: browse the whole collection, narrowed by any selected tag/segment/filter
+  const search = detail.n_records > 0
     ? await api.searchCollection(params.name, { q: p.get("q") ?? "", filters, size: 30 })
     : null;
   return { detail, samples: samples.samples, search, filters };
