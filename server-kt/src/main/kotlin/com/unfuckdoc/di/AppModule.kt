@@ -1,6 +1,8 @@
 package com.unfuckdoc.di
 
+import com.unfuckdoc.api.CollectionService
 import com.unfuckdoc.api.DatasetService
+import com.unfuckdoc.api.MatchService
 import com.unfuckdoc.domain.Canonicalizer
 import com.unfuckdoc.domain.Classifier
 import com.unfuckdoc.domain.Consolidator
@@ -31,6 +33,8 @@ class AppModule : KotlinModule() {
         bind<Pipeline>().`in`<Singleton>()
         bind<SemanticCanonicalizer>().`in`<Singleton>()
         bind<DatasetService>().`in`<Singleton>()
+        bind<CollectionService>().`in`<Singleton>()
+        bind<MatchService>().`in`<Singleton>()
         bind<ApiController>().`in`<Singleton>()
 
         // real neural embeddings for semantic field-name matching, unless UNFUCK_NO_EMBED=1

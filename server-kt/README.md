@@ -94,7 +94,7 @@ src/main/kotlin/com/unfuckdoc/
   domain/                        Classifier, Canonicalizer, Consolidator, Pipeline, Cleaner, IndexBuilder, Dsl, CsvReader
   api/                           DatasetService (single-dataset state), Overview/Search DTOs, JsonSchema
   opensearch/OpenSearchService   opensearch-java client (index + search)
-  routes/ApiController.kt        @Inject controller — /health, /api/{samples,overview,load_sample,upload,search,schema}
+  routes/ApiController.kt        @Inject controller — /health, /api/{samples,overview,load_sample,upload,search,schema,collections/*,match*}
 src/test/kotlin/com/unfuckdoc/
   support/IntegrationTest.kt     base: boots installApp over a Guice-bound MockK OpenSearch (+ embedder option)
   AppIntegrationTest.kt          HTTP integration tests: overview/load/index(mock)/search/schema

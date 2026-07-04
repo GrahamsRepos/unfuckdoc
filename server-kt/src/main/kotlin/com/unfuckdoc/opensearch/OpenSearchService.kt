@@ -49,6 +49,12 @@ class OpenSearchService(host: String = "localhost", port: Int = 9200) {
         return c.count { it.index(index) }.count().toInt()
     }
 
+    /** Delete an index if it exists (best-effort). */
+    fun deleteIndex(index: String) {
+        val c = client ?: return
+        if (c.indices().exists { it.index(index) }.value()) c.indices().delete { it.index(index) }
+    }
+
     /** Run a raw query body ({"bool":{...}} / {"match_all":{}}) against the index; return hit sources. */
     fun search(index: String, queryJson: String, size: Int): List<Map<String, Any?>> {
         val c = client ?: error("OpenSearch unavailable")
