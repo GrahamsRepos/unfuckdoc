@@ -744,6 +744,29 @@ def collections_add(name):
     return jsonify(added=_short(fn), mapping=[dict(column=m["column"], canonical=m["canonical"], method=m["method"]) for m in mapping],
                    detail=_collection_detail(coll))
 
+COLL_DISPLAY = ["company", "email", "phone", "country", "city", "job_title", "amount", "lead_source"]
+def _row_name(d):
+    """One display name regardless of vendor granularity: full_name, else first + last."""
+    fn = _flatten(d.get("full_name")).strip()
+    if fn: return fn
+    return " ".join(p for p in (_flatten(d.get("first_name")).strip(),
+                                _flatten(d.get("last_name")).strip()) if p).strip()
+
+def _coll_display(coll):
+    fields = set(coll["schema"])
+    has_name = fields & {"full_name", "first_name", "last_name"}
+    cols = ["_source_file"] + (["name"] if has_name else [])
+    cols += [c for c in COLL_DISPLAY if c in fields]
+    return cols[:8]
+
+def _coll_row(d, cols):
+    row = {}
+    for c in cols:
+        if c == "_source_file": row[c] = _short(d.get("_source_file"))
+        elif c == "name": row[c] = _row_name(d)
+        else: row[c] = _flatten(d.get(c))
+    return row
+
 @app.route("/api/collections/<name>/search", methods=["POST"])
 def collections_search(name):
     if name not in COLLECTIONS: return jsonify(error="unknown collection"), 404
@@ -752,16 +775,15 @@ def collections_search(name):
     q = (body.get("q") or "").strip().lower()
     filters = [f for f in (body.get("filters") or []) if f.get("field") and f.get("value") != ""]
     size = min(int(body.get("size", 20)), 100)
-    disp = [s["field"] for s in _collection_detail(coll)["schema"]][:6]
-    if "_source_file" not in disp: disp = ["_source_file"] + disp[:5]
+    disp = _coll_display(coll)
     out = []
     for d in coll["docs"]:
         if filters and not all(_filter_match(_field_values(d.get(f["field"])), f["value"]) for f in filters):
             continue
         if q:
-            blob = " ".join(_flatten(v) for k, v in d.items() if not k.endswith(("_vector",))).lower()
+            blob = " ".join(_flatten(v) for k, v in d.items() if not k.endswith("_vector")).lower()
             if q not in blob: continue
-        out.append({c: (_short(d.get(c)) if c == "_source_file" else _flatten(d.get(c))) for c in disp})
+        out.append(_coll_row(d, disp))
         if len(out) >= size: break
     return jsonify(display=disp, count=len(out), results=out)
 
