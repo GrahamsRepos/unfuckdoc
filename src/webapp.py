@@ -96,6 +96,20 @@ def _field_values(v):
         return [v["value"]] if v.get("value") is not None else []
     return [v]
 
+def _filter_match(raw_vals, needle):
+    """Exact (case-insensitive, trimmed) match of a filter value against a field's members.
+    For an array field, matching ANY member counts. Numeric-tolerant so 12000 == 12000.0."""
+    n = str(needle).strip().lower()
+    for v in raw_vals:
+        if str(v).strip().lower() == n:
+            return True
+        try:
+            if float(v) == float(needle):
+                return True
+        except (TypeError, ValueError):
+            pass
+    return False
+
 def _facets(res):
     """Per searchable (non free-text) canonical field: type + distinct count, and the value list
     when it's low-cardinality enough to offer as a dropdown. This is what makes fields filterable."""
@@ -269,9 +283,7 @@ def search():
         if tag and not any(tag in d.get(f"{c}_keywords", []) for c in res["fuzzy"]):
             return False
         for f in filters:
-            vals = [str(x).lower() for x in _field_values(d.get(f["field"]))]
-            needle = str(f["value"]).lower()
-            if not any(needle in v for v in vals):
+            if not _filter_match(_field_values(d.get(f["field"])), f["value"]):
                 return False
         return True
 
