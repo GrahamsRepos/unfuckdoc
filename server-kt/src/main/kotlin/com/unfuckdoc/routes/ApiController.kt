@@ -1,51 +1,48 @@
 package com.unfuckdoc.routes
 
-import jakarta.inject.Inject
-import jakarta.inject.Singleton
+import com.unfuckdoc.api.DatasetService
+import com.unfuckdoc.api.FieldFilter
 import com.unfuckdoc.domain.CsvReader
-import com.unfuckdoc.domain.Dsl
-import com.unfuckdoc.domain.IndexBuilder
-import com.unfuckdoc.domain.Pipeline
-import com.unfuckdoc.opensearch.OpenSearchService
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.request.receiveText
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
+import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import kotlinx.serialization.json.add
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import io.ktor.utils.io.readRemaining
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
+import kotlinx.io.readByteArray
+import kotlinx.serialization.Serializable
 import java.io.File
 
+@Serializable
+data class LoadRequest(val name: String)
+
+@Serializable
+data class SearchRequest(
+    val q: String = "", val mode: String = "keyword", val field: String? = null,
+    val tag: String = "", val filters: List<FieldFilter> = emptyList(), val size: Int = 12,
+)
+
 /**
- * HTTP layer. Dependencies are injected by Guice via the constructor (@Inject); the class is
- * just-in-time bound (no explicit binding in AppModule needed). `install(route)` attaches the
- * handlers to a Ktor Route.
+ * HTTP layer implementing the API contract the RR7 frontend expects. Dependencies are injected by
+ * Guice via the constructor (@Inject). `install(route)` attaches the handlers to a Ktor Route.
  */
 @Singleton
 class ApiController @Inject constructor(
-    private val pipeline: Pipeline,
     private val csv: CsvReader,
-    private val indexBuilder: IndexBuilder,
-    private val opensearch: OpenSearchService,
+    private val dataset: DatasetService,
 ) {
     private val dataDir = File(System.getenv("DATA_DIR") ?: "../data").canonicalFile
 
-    private fun slug(filename: String): String =
-        "kt_" + filename.substringBeforeLast('.').lowercase()
-            .replace(Regex("[^a-z0-9]+"), "_").trim('_').take(40)
-
-    /** Resolve CSV text from a bundled ?sample= (path-guarded) or the raw request body. */
-    private fun readCsv(sample: String?, body: String): Pair<List<String>, List<Map<String, String?>>>? {
-        val text = if (sample != null) {
-            val f = File(dataDir, sample).canonicalFile
-            if (!f.path.startsWith(dataDir.path) || !f.isFile) return null
-            f.readText()
-        } else body
-        return csv.parse(text)
+    private fun sampleText(name: String): String? {
+        val f = File(dataDir, name).canonicalFile
+        return if (f.path.startsWith(dataDir.path) && f.isFile) f.readText() else null
     }
 
     fun install(route: Route): Unit = with(route) {
@@ -61,59 +58,35 @@ class ApiController @Inject constructor(
             call.respond(mapOf("samples" to found))
         }
 
-        get("/api/opensearch") {
-            call.respond(mapOf("available" to opensearch.available().toString()))
-        }
+        get("/api/overview") { call.respond(dataset.overview()) }
 
-        // Classify + canonicalize a CSV (?sample= or raw body).
-        post("/api/process") {
-            val sample = call.request.queryParameters["sample"]
-            val parsed = readCsv(sample, call.receiveText())
+        post("/api/load_sample") {
+            val name = call.receive<LoadRequest>().name
+            val text = sampleText(name)
                 ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "unknown sample"))
-            val (headers, rows) = parsed
-            if (headers.isEmpty())
-                return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "no columns parsed"))
-            call.respond(pipeline.process(sample?.substringAfterLast('/') ?: "upload.csv", headers, rows))
+            val (headers, rows) = csv.parse(text)
+            call.respond(dataset.load(name.substringAfterLast('/'), headers, rows))
         }
 
-        // Classify -> consolidate -> index into OpenSearch (real opensearch-java client).
-        post("/api/index") {
-            val sample = call.request.queryParameters["sample"]
-            val parsed = readCsv(sample, call.receiveText())
-                ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "unknown sample"))
-            val (headers, rows) = parsed
-            val filename = sample?.substringAfterLast('/') ?: "upload.csv"
-            val result = pipeline.process(filename, headers, rows)
-            val bundle = indexBuilder.build(rows, result.columns)
-            if (!opensearch.available())
-                return@post call.respond(HttpStatusCode.ServiceUnavailable, mapOf("error" to "OpenSearch not reachable on :9200"))
-            val index = slug(filename)
-            val count = opensearch.indexDocs(index, bundle.mappingJson, bundle.docs)
-            call.respond(buildJsonObject {
-                put("index", index); put("count", count); put("fields", bundle.properties.size)
-            })
+        post("/api/upload") {
+            var bytes: ByteArray? = null
+            var filename = "upload.csv"
+            call.receiveMultipart().forEachPart { part ->
+                if (part is PartData.FileItem) {
+                    filename = part.originalFileName ?: filename
+                    bytes = part.provider().readRemaining().readByteArray()
+                }
+                part.dispose()
+            }
+            val text = bytes?.toString(Charsets.UTF_8)
+                ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "no file uploaded"))
+            val (headers, rows) = csv.parse(text)
+            call.respond(dataset.load(filename, headers, rows))
         }
 
-        // Build a query DSL from params, run it via opensearch-java, return hits + the DSL.
         post("/api/search") {
-            val params = call.request.queryParameters
-            val index = params["index"]
-                ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "index required"))
-            val q = params["q"]
-            val filters = params.entries().filter { it.key == "f" }.flatMap { it.value }
-                .mapNotNull { s -> s.indexOf(':').takeIf { it > 0 }?.let { s.substring(0, it) to s.substring(it + 1) } }
-                .toMap()
-            val size = params["size"]?.toIntOrNull() ?: 10
-            if (!opensearch.available())
-                return@post call.respond(HttpStatusCode.ServiceUnavailable, mapOf("error" to "OpenSearch not reachable"))
-            val query = Dsl.query(q, filters, listOf("*"))
-            val hits = opensearch.search(index, Dsl.toJson(query), size)
-            call.respond(buildJsonObject {
-                put("index", index)
-                put("dsl", Dsl.display(query, size))
-                put("count", hits.size)
-                put("results", buildJsonArray { hits.forEach { add(Dsl.anyToJson(it)) } })
-            })
+            val req = call.receive<SearchRequest>()
+            call.respond(dataset.search(req.mode, req.field, req.q, req.tag, req.filters, req.size))
         }
     }
 }

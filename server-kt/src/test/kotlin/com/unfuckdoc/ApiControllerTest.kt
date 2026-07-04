@@ -8,7 +8,9 @@ import dev.misfitlabs.kotlinguice4.getInstance
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import io.mockk.every
 import io.mockk.mockk
@@ -18,44 +20,43 @@ import kotlin.test.assertTrue
 
 /**
  * Demonstrates the testability seam: build the real injector but selectively override one binding
- * with a mock. The rest of the graph (Pipeline <- Classifier, Canonicalizer, IndexBuilder) is wired
- * for real via @Inject.
+ * with a mock. The rest of the graph (DatasetService <- Pipeline, Consolidator, IndexBuilder) is
+ * wired for real via @Inject.
  */
 class ApiControllerTest {
 
     /** Real container, but swap OpenSearchService for the given (mock) instance. */
     private fun controllerWith(os: OpenSearchService): ApiController =
         appInjector(object : KotlinModule() {
-            override fun configure() {
-                bind<OpenSearchService>().toInstance(os)
-            }
+            override fun configure() { bind<OpenSearchService>().toInstance(os) }
         }).getInstance<ApiController>()
 
     @Test
-    fun `process uses the real pipeline graph`() = testApplication {
-        val controller = controllerWith(mockk(relaxed = true))
-        application { module(controller) }
-
-        val res = client.post("/api/process") { setBody("First Name,Amount\nAisha,\$1000\nLiam,\$2000\n") }
-
+    fun `overview is empty before anything is loaded`() = testApplication {
+        application { module(controllerWith(mockk(relaxed = true))) }
+        val res = client.post("/api/search") {
+            contentType(ContentType.Application.Json); setBody("""{"q":"x"}""")
+        }
         assertEquals(HttpStatusCode.OK, res.status)
-        val body = res.bodyAsText()
-        assertTrue("first_name" in body, body)
-        assertTrue("amount" in body, body)
+        assertTrue("upload a CSV first" in res.bodyAsText(), res.bodyAsText())
     }
 
     @Test
-    fun `index uses the mocked OpenSearch, not a real cluster`() = testApplication {
+    fun `load runs the real pipeline against a mocked OpenSearch`() = testApplication {
         val os = mockk<OpenSearchService> {
             every { available() } returns true
-            every { indexDocs(any(), any(), any()) } returns 99
+            every { indexDocs(any(), any(), any()) } returns 120
         }
-        val controller = controllerWith(os)
-        application { module(controller) }
+        application { module(controllerWith(os)) }
 
-        val res = client.post("/api/index") { setBody("First Name,Amount\nAisha,1000\n") }
+        val res = client.post("/api/load_sample") {
+            contentType(ContentType.Application.Json); setBody("""{"name":"samples/crm_contacts.csv"}""")
+        }
 
         assertEquals(HttpStatusCode.OK, res.status)
-        assertTrue("99" in res.bodyAsText(), res.bodyAsText())
+        val body = res.bodyAsText()
+        assertTrue("\"loaded\": true" in body, body)     // real pipeline + consolidation ran
+        assertTrue("\"count\": 120" in body, body)        // mocked OpenSearch was used during load
+        assertTrue("first_name" in body, body)            // snake_case canonical mapping
     }
 }

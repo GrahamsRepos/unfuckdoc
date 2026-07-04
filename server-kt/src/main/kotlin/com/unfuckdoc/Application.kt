@@ -14,12 +14,19 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNamingStrategy
 
 /** Ktor wiring, parameterized by the controller — so tests can mount it with a mock-injected one. */
+@OptIn(ExperimentalSerializationApi::class)
 fun Application.module(controller: ApiController) {
     install(ContentNegotiation) {
-        json(Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false })
+        // snake_case wire format to match the Python API contract the RR7 frontend expects.
+        json(Json {
+            prettyPrint = true; encodeDefaults = true; explicitNulls = false
+            namingStrategy = JsonNamingStrategy.SnakeCase
+        })
     }
     install(CallLogging)
     install(StatusPages) {
