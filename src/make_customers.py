@@ -127,4 +127,32 @@ write("subscribers.csv",
                maybe(r["note"], 0.05)],
     data)
 
-print("\ndone — three customer CSVs with different schemas describing the same entity.")
+# File 4 — multi-valued contacts: exercises scalar-vs-array consolidation.
+#   phone_home/work/mobile  -> concurrent, distinct  -> SEMANTIC array [{type,value}]
+#   interest_1/2/3          -> concurrent, distinct  -> POSITIONAL array [..]
+#   country / cntry         -> mutually exclusive     -> SCALAR (survivorship coalesce)
+INTERESTS=["sustainability","logistics","automation","analytics","robotics","fintech",
+           "healthcare","solar","ceramics","textiles","security","mining","media","farming"]
+def subset(seq, lo, hi):
+    k=random.randint(lo, hi); return random.sample(seq, k)
+def phones():
+    # each row populates a random subset of the three phone slots, with DISTINCT numbers
+    slots=subset(["home","work","mobile"], 1, 3)
+    return {s: f"+1-{random.randint(200,999)}-{random.randint(100,999)}-{random.randint(1000,9999)}" for s in slots}
+
+def multi_row(r):
+    ph=phones()
+    ints=subset(INTERESTS, 1, 3)
+    # country lives in EXACTLY ONE of the two columns per row (alternatives, not multiples)
+    use_alt = random.random() < 0.4
+    country, cntry = ("", r["country"]) if use_alt else (r["country"], "")
+    return [r["full"], ph.get("home",""), ph.get("work",""), ph.get("mobile",""),
+            ints[0] if len(ints)>0 else "", ints[1] if len(ints)>1 else "", ints[2] if len(ints)>2 else "",
+            country, cntry, r["note"]]
+
+write("multi_contacts.csv",
+    ["full_name","phone_home","phone_work","phone_mobile",
+     "interest_1","interest_2","interest_3","country","cntry","notes"],
+    multi_row, data)
+
+print("\ndone — four customer CSVs (three schema variants + one multi-valued) describing the same entity.")

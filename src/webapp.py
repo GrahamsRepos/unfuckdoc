@@ -77,13 +77,19 @@ def _registry_view():
     out.sort(key=lambda g: (not g["unified"], -g["n_files"], -g["n_columns"], g["canonical"]))
     return out
 
+def _flatten(v):
+    """Render a consolidated value (scalar / array / labeled-object array) to searchable text."""
+    if v is None: return ""
+    if isinstance(v, list): return " ".join(_flatten(x) for x in v)
+    if isinstance(v, dict): return str(v.get("value", ""))
+    return str(v)
+
 def _build_search_index(res):
-    """Precompute per-doc lowercased text blobs for the keyword search."""
-    str_cols = [c for c, i in res["catalog"].items()
-                if i.get("searchable") and i["os_type"] in ("keyword", "text")]
+    """Precompute per-doc lowercased text blobs for the keyword search (over canonical fields)."""
+    str_fields = [u["canonical"] for u in res["unified"] if u["os_type"] in ("keyword", "text")]
     blobs = []
     for d in res["docs"]:
-        parts = [str(d.get(c, "")) for c in str_cols]
+        parts = [_flatten(d.get(f)) for f in str_fields]
         for c in res["fuzzy"]:
             parts.append(str(d.get(f"{c}_summary", "")))
             parts.append(" ".join(d.get(f"{c}_keywords", [])))
@@ -91,22 +97,15 @@ def _build_search_index(res):
     return blobs
 
 def _display_columns(res):
-    """A compact, sensibly-ordered set of columns for result tables."""
+    """A compact, sensibly-ordered set of canonical fields for result tables."""
     order = ["full_name", "first_name", "last_name", "company", "job_title", "title",
-             "email", "phone", "country", "region", "city", "amount", "rating", "date"]
-    cat = res["catalog"]
-    by_canon = {}  # representative column per canonical = the best-covered one
-    for c, i in cat.items():
-        if i.get("searchable") and i["kind"] != "free_text":
-            cur = by_canon.get(i["canonical"])
-            if cur is None or (i.get("fill_rate", 0) > cat[cur].get("fill_rate", 0)):
-                by_canon[i["canonical"]] = c
-    cols = [by_canon[k] for k in order if k in by_canon]
-    # fill up to 8 with any remaining primitive (non free-text) searchable columns
-    for c, i in cat.items():
+             "email", "phone", "country", "region", "city", "amount", "rating", "date", "interests"]
+    prim = {u["canonical"] for u in res["unified"] if u["kind"] != "free_text"}
+    cols = [k for k in order if k in prim]
+    for u in res["unified"]:                       # top up to 8 with any remaining primitive fields
         if len(cols) >= 8: break
-        if i.get("searchable") and c not in cols and i["kind"] != "free_text":
-            cols.append(c)
+        if u["kind"] != "free_text" and u["canonical"] not in cols:
+            cols.append(u["canonical"])
     fuzzy_summ = [f"{c}_summary" for c in res["fuzzy"][:1]]
     return cols[:8] + fuzzy_summ
 
@@ -134,18 +133,24 @@ def _overview():
 
     # aggregate extracted tags/keywords per free-text column
     tags = {}
+    all_tags = collections.Counter()
     for c in res["fuzzy"]:
         counter = collections.Counter()
         for d in res["docs"]:
             counter.update(d.get(f"{c}_keywords", []))
         tags[c] = counter.most_common(25)
+        all_tags.update(counter)
 
+    unified = sorted(res["unified"],
+                     key=lambda u: (u["cardinality"] != "array", u["kind"] == "free_text", u["canonical"]))
     samples = [_doc_no_vec(d) for d in res["docs"][:5]]
     return dict(loaded=True, filename=STATE.get("filename"),
                 n_rows=res["n_rows"], n_cols=res["n_cols"],
                 llm_calls=res["llm_calls"], coerced=res["coerced"], quarantine=res["quarantine"],
                 columns=columns, kind_counts=dict(kind_counts),
                 merge_groups=merge, fuzzy=res["fuzzy"], tags=tags,
+                all_tags=[t for t, _ in all_tags.most_common(40)],
+                unified=unified,
                 sample_docs=samples, display_columns=_display_columns(res),
                 registry=_registry_view(),
                 opensearch=STATE.get("opensearch", {"status": "unknown"}))
@@ -223,26 +228,43 @@ def search():
     q = (body.get("q") or "").strip()
     mode = body.get("mode", "semantic")
     size = min(int(body.get("size", 10)), 50)
+    tag = (body.get("tag") or "").strip()
     field = body.get("field") or (res["fuzzy"][0] if res["fuzzy"] else None)
-    if not q:
-        return jsonify(error="empty query"), 400
+    if not q and not tag:
+        return jsonify(error="enter a query or pick a tag"), 400
+
+    # tag facet: does this doc carry the tag in any free-text column's extracted keywords?
+    def has_tag(i):
+        if not tag:
+            return True
+        d = res["docs"][i]
+        return any(tag in d.get(f"{c}_keywords", []) for c in res["fuzzy"])
 
     hits = []
-    if mode == "semantic":
+    if not q:                                          # tag-only: list docs carrying the tag
+        for i in range(len(res["docs"])):
+            if has_tag(i):
+                hits.append(dict(score="●", doc_id=i))
+            if len(hits) >= size:
+                break
+    elif mode == "semantic":
         if not field or field not in res["vectors"]:
             return jsonify(error="no free-text column to search semantically"), 400
         qv = res["embedders"][field].tf([q])[0]
         sims = res["vectors"][field] @ qv
-        idx = np.argsort(-sims)[:size]
-        for i in idx:
-            hits.append(dict(score=round(float(sims[i]), 3), doc_id=int(i)))
+        for i in np.argsort(-sims):                     # filter by tag before truncating to size
+            i = int(i)
+            if has_tag(i):
+                hits.append(dict(score=round(float(sims[i]), 3), doc_id=i))
+            if len(hits) >= size:
+                break
     else:  # keyword
         terms = [t for t in re.split(r"\s+", q.lower()) if t]
         blobs = STATE["blobs"]
         scored = []
         for i, b in enumerate(blobs):
             s = sum(b.count(t) for t in terms)
-            if s > 0:
+            if s > 0 and has_tag(i):
                 scored.append((s, i))
         scored.sort(key=lambda x: -x[0])
         for s, i in scored[:size]:
@@ -256,7 +278,7 @@ def search():
         # include primary keywords so tags are visible in results
         kw = d.get(f"{field}_keywords") if field else None
         out.append(dict(score=h["score"], row=row, keywords=(kw or [])[:5]))
-    return jsonify(mode=mode, field=field, count=len(out),
+    return jsonify(mode=mode, field=field, tag=tag, count=len(out),
                    display_columns=disp, results=out)
 
 

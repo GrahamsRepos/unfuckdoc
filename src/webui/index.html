@@ -154,6 +154,20 @@
       <div class="merge" id="registry"></div>
     </div>
 
+    <!-- CONSOLIDATED FIELDS (scalar vs array) -->
+    <div class="card" id="consCard">
+      <h2>Consolidated fields — scalar vs array</h2>
+      <p class="hint">Columns sharing a canonical key are merged. Fill-pattern decides the shape:
+         <b>exclusive fill → scalar</b> (survivorship), <b>concurrent distinct values → array</b>
+         (a positional <code>x_1/x_2</code> set becomes a bare list; a semantic <code>x_home/x_work</code>
+         set keeps its label as <code>{type, value}</code>).</p>
+      <div class="scroll">
+        <table id="cons"><thead><tr>
+          <th>Canonical field</th><th>Shape</th><th>From columns</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
     <!-- CLASSIFICATION TABLE -->
     <div class="card">
       <h2>Per-column classification</h2>
@@ -181,9 +195,11 @@
           <option value="keyword">Keyword</option>
         </select>
         <select id="field"></select>
+        <select id="tag" title="filter results by an extracted tag"></select>
         <input id="q" type="text" placeholder="e.g. churn risk, upsell opportunity, crisp citrus…">
         <button class="btn" id="go">Search</button>
       </div>
+      <p class="hint" style="margin:10px 0 0">Tip: pick a <b>tag</b> to filter, or click any tag bar above. Leave the text box empty to list everything with that tag.</p>
       <div id="results"></div>
     </div>
   </div>
@@ -251,6 +267,7 @@ function render(d){
   fills(d.columns);
   merge(d.merge_groups);
   registry(d.registry);
+  consolidation(d.unified);
   colsTable(d.columns);
   tags(d.tags);
   searchSetup(d);
@@ -322,6 +339,26 @@ function registry(groups){
 }
 $('#resetReg').addEventListener('click', async ()=>{ await jpost('/api/reset_registry',{}); if(DATA){ DATA.registry=[]; registry([]); } });
 
+function consolidation(unified){
+  const tb=$('#cons').querySelector('tbody'); tb.innerHTML='';
+  if(!unified || !unified.length){ $('#consCard').classList.add('hidden'); return; }
+  $('#consCard').classList.remove('hidden');
+  unified.forEach(u=>{
+    const tr=el('tr');
+    tr.appendChild(el('td', null, `<span class="canon">${u.canonical}</span>`));
+    let shape;
+    if(u.cardinality==='array') shape=`<span class="kind k-enum">array · ${u.style}</span>`;
+    else shape=`<span class="kind k-identifier">scalar${u.sources.length>1?' · coalesced':''}</span>`;
+    tr.appendChild(el('td', null, shape));
+    const cols = u.sources.map((c,idx)=>{
+      const lab=u.labels[idx];
+      return (u.cardinality==='array'&&u.style==='semantic'&&lab)? `${c} <span class="mut">→${lab}</span>` : c;
+    }).join(' <span class="arrow">·</span> ');
+    tr.appendChild(el('td', null, u.sources.length>1?cols:`<span class="mut">${cols}</span>`));
+    tb.appendChild(tr);
+  });
+}
+
 function colsTable(cols){
   const tb=$('#cols').querySelector('tbody'); tb.innerHTML='';
   cols.forEach(c=>{
@@ -348,10 +385,11 @@ function tags(tagsByCol){
     const max=items[0][1];
     const wrap=el('div','tagbars');
     items.slice(0,15).forEach(([t,n])=>{
-      const r=el('div','tagbar');
+      const r=el('div','tagbar'); r.style.cursor='pointer'; r.title='filter results by this tag';
       r.appendChild(el('span','t', t));
       const b=el('div','b'); b.style.width=Math.max(4,Math.round(n/max*100))+'%'; r.appendChild(b);
       r.appendChild(el('span','n', n));
+      r.addEventListener('click', ()=> filterByTag(t));
       wrap.appendChild(r);
     });
     box.appendChild(wrap);
@@ -364,8 +402,21 @@ function searchSetup(d){
   const hasText = (d.fuzzy||[]).length>0;
   $('#mode').value = hasText?'semantic':'keyword';
   fsel.classList.toggle('hidden', !hasText);
+  // tag filter dropdown
+  const tsel=$('#tag'); tsel.innerHTML='';
+  tsel.appendChild(el('option',null,'— any tag —')).value='';
+  (d.all_tags||[]).forEach(t=> tsel.appendChild(el('option',null,t)).value=t);
+  tsel.classList.toggle('hidden', !(d.all_tags||[]).length);
   $('#results').innerHTML='';
   toggleField();
+}
+function filterByTag(t){ $('#tag').value=t; doSearch(); $('#results').scrollIntoView({behavior:'smooth',block:'center'}); }
+// render a consolidated value (scalar / array / labeled-object array) for a table cell
+function renderVal(v){
+  if(v==null) return '<span class="mut">—</span>';
+  if(Array.isArray(v)) return v.map(renderVal).join('<span class="mut">, </span>');
+  if(typeof v==='object') return `<span class="mut">${v.type}:</span>${v.value}`;
+  return String(v);
 }
 $('#mode').addEventListener('change', toggleField);
 function toggleField(){
@@ -376,19 +427,21 @@ $('#go').addEventListener('click', doSearch);
 $('#q').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
 
 async function doSearch(){
-  const q=$('#q').value.trim(); if(!q) return;
-  const body={q, mode:$('#mode').value, field:$('#field').value, size:12};
+  const q=$('#q').value.trim(); const tag=$('#tag').value;
+  if(!q && !tag){ $('#results').innerHTML='<div class="empty">enter a query or pick a tag</div>'; return; }
+  const body={q, tag, mode:$('#mode').value, field:$('#field').value, size:12};
   const d=await jpost('/api/search', body);
   const box=$('#results');
   if(d.error){ box.innerHTML=`<div class="empty">⚠ ${d.error}</div>`; return; }
-  if(!d.results.length){ box.innerHTML=`<div class="empty">no matches</div>`; return; }
+  const banner = tag ? `<p class="hint">filtered by tag <span class="kw">${tag}</span>${q?' + query':''} — ${d.count} match(es)</p>` : '';
+  if(!d.results.length){ box.innerHTML=banner+`<div class="empty">no matches</div>`; return; }
   const cols=d.display_columns.filter(c=> d.results.some(r=> c in r.row));
-  let html='<div class="scroll"><table><thead><tr><th>score</th>';
+  let html=banner+'<div class="scroll"><table><thead><tr><th>score</th>';
   cols.forEach(c=> html+=`<th>${c.replace(/_summary$/,' ✎')}</th>`);
   html+='<th>tags</th></tr></thead><tbody>';
   d.results.forEach(r=>{
     html+=`<tr><td class="score">${r.score}</td>`;
-    cols.forEach(c=>{ let v=r.row[c]; if(v==null)v='<span class="mut">—</span>'; else v=String(v);
+    cols.forEach(c=>{ let v=renderVal(r.row[c]);
       if(c.endsWith('_summary')&&v.length>140)v=v.slice(0,140)+'…';
       html+=`<td>${v}</td>`; });
     html+=`<td><div class="kws">${(r.keywords||[]).map(k=>`<span class="kw">${k}</span>`).join('')}</div></td></tr>`;
