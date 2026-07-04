@@ -6,6 +6,7 @@ import { CollectionSchema } from "~/components/CollectionSchema";
 import { FileMapping } from "~/components/FileMapping";
 import { CollectionSearchPanel } from "~/components/CollectionSearchPanel";
 import { Segments } from "~/components/Segments";
+import { MergeGraph } from "~/components/MergeGraph";
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `collection · ${params.name}` }];
@@ -115,6 +116,7 @@ export default function Collection({ loaderData }: Route.ComponentProps) {
       </section>
 
       <Segments detail={detail} activeFilters={filters} />
+      <MergeGraph detail={detail} />
       <CollectionSchema detail={detail} />
       <FileMapping detail={detail} />
       <CollectionSearchPanel detail={detail} search={search} />
