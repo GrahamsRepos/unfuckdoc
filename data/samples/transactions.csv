@@ -1,0 +1,161 @@
+txn_id,timestamp,amount,currency,customer_email,status,payment_method,memo
+TXN8117405383,2024-12-12T21:06:00Z,1704.00,USD,mateo.dubois@biz.com,pending,paypal,
+TXN6848978663,2024-11-23T20:43:00Z,5430.00,GBP,amara.dubois@acme.com,refunded,bank_transfer,flagged for review
+TXN7217968622,2024-09-05T23:38:00Z,$938.87,USD,camila.larsen@acme.com,failed,bank_transfer,
+TXN9513256229,2024-11-25T07:18:00Z,"€2,372.24",EUR,mateo.okoro@biz.com,refunded,visa,
+TXN7581569161,2024-03-07T16:51:00Z,5907.00,EUR,liam.patel@mail.com,pending,paypal,chargeback opened
+TXN3038966906,2024-10-11T14:25:00Z,"€5,905.88",EUR,kenji.yusuf@mail.com,failed,bank_transfer,
+TXN7969588035,2024-09-27T13:40:00Z,"€4,377.14",EUR,priya.sato@acme.com,pending,paypal,
+TXN9235556132,2024-09-26T09:54:00Z,"£6,750.96",GBP,nadia.tanaka@mail.com,refunded,visa,chargeback opened
+TXN3355982264,2024-10-22T13:53:00Z,5011.00,GBP,wei.tanaka@mail.com,pending,mastercard,
+TXN6762749206,2024-07-16T10:22:00Z,1935.00,GBP,priya.lindqvist@corp.com,refunded,paypal,
+TXN3868230967,2024-10-14T12:13:00Z,"£1,085.52",GBP,fatima.bauer@corp.com,pending,mastercard,
+TXN8081727243,2024-05-05T20:45:00Z,8206.00,USD,wei.diallo@co.com,failed,visa,first-time buyer
+TXN2328227347,2024-06-22T18:56:00Z,"£4,478.77",GBP,sofia.brown@acme.com,completed,visa,
+TXN9492317814,2024-10-18T19:51:00Z,2278.00,EUR,liam.nguyen@co.com,refunded,visa,
+TXN6192542222,2024-10-18T22:01:00Z,"£5,577.42",GBP,tomas.patel@acme.com,failed,bank_transfer,
+TXN7013552882,2024-09-19T13:14:00Z,"£4,489.92",GBP,ethan.nguyen@mail.com,failed,paypal,chargeback opened
+TXN7947882045,2024-04-11T19:12:00Z,2196.00,GBP,kenji.diallo@corp.com,failed,mastercard,chargeback opened
+TXN4191444521,2024-05-07T17:48:00Z,£275.56,GBP,wei.haddad@acme.com,completed,visa,
+TXN6817826569,2024-02-02T23:11:00Z,8815.00,USD,wei.brown@biz.com,completed,bank_transfer,
+TXN6663022520,2024-03-28T03:33:00Z,5966.00,USD,fatima.bauer@co.com,refunded,mastercard,
+TXN2649918652,2024-07-05T04:00:00Z,3168.00,USD,kenji.kovac@co.com,refunded,visa,chargeback opened
+TXN4925079425,2024-06-11T19:35:00Z,"$7,602.99",USD,ingrid.reddy@corp.com,completed,mastercard,verified by 3DS
+TXN7184911236,2024-10-19T20:43:00Z,"€1,709.12",EUR,wei.larsen@acme.com,completed,bank_transfer,
+TXN1608923304,2024-08-20T12:04:00Z,3933.00,GBP,wei.silva@corp.com,completed,bank_transfer,first-time buyer
+TXN1004060809,2024-08-02T12:15:00Z,$632.31,USD,tomas.yusuf@acme.com,refunded,paypal,
+TXN1414787475,2024-03-26T16:10:00Z,"$7,850.96",USD,lars.dubois@mail.com,completed,apple_pay,recurring subscription
+TXN9923316580,2024-01-22T17:39:00Z,"$1,186.03",USD,omar.larsen@biz.com,completed,apple_pay,
+TXN5193844923,2024-09-17T11:43:00Z,"$8,311.58",USD,kenji.rossi@corp.com,completed,visa,
+TXN9497891324,2024-04-01T02:04:00Z,4850.00,EUR,liam.tanaka@co.com,pending,apple_pay,
+TXN4595695937,2024-12-24T00:42:00Z,"€3,459.97",EUR,ethan.hall@biz.com,completed,mastercard,first-time buyer
+TXN2496726237,2024-06-13T03:10:00Z,"€4,190.90",EUR,ingrid.patel@biz.com,failed,paypal,
+TXN8799953324,2024-01-25T07:56:00Z,£347.43,GBP,yuki.rossi@co.com,pending,visa,chargeback opened
+TXN3307601602,2024-08-06T06:33:00Z,6968.00,EUR,liam.ferrari@co.com,pending,bank_transfer,first-time buyer
+TXN4803899735,2024-12-09T13:45:00Z,"£1,473.82",GBP,kenji.patel@co.com,refunded,apple_pay,
+TXN1118869825,2024-12-28T06:41:00Z,4663.00,GBP,grace.berg@co.com,pending,visa,
+TXN3300721549,2024-02-12T02:09:00Z,"€4,984.09",EUR,mateo.tanaka@biz.com,failed,bank_transfer,verified by 3DS
+TXN6038934220,2024-12-04T14:21:00Z,4972.00,EUR,yuki.kovac@acme.com,refunded,mastercard,chargeback opened
+TXN1384337875,2024-11-22T18:19:00Z,"€5,502.35",EUR,ethan.bauer@corp.com,completed,mastercard,
+TXN1958889404,2024-02-10T00:17:00Z,"$6,280.32",USD,marcus.brown@mail.com,pending,mastercard,flagged for review
+TXN4418646461,2024-05-25T12:59:00Z,"€6,074.46",EUR,aisha.silva@corp.com,pending,bank_transfer,
+TXN2586335309,2024-05-01T15:28:00Z,"€4,312.00",EUR,ravi.tanaka@acme.com,refunded,apple_pay,
+TXN4907760968,2024-07-15T01:07:00Z,1934.00,EUR,elena.rossi@mail.com,failed,bank_transfer,
+TXN2615852408,2024-01-14T16:03:00Z,€943.09,EUR,tomas.dubois@corp.com,failed,mastercard,
+TXN2365023426,2024-04-09T21:50:00Z,"€7,680.58",EUR,noah.rossi@acme.com,refunded,bank_transfer,
+TXN9728311110,2024-11-08T15:42:00Z,8437.00,USD,lars.hall@mail.com,pending,bank_transfer,flagged for review
+TXN5647010318,2024-04-28T01:18:00Z,PENDING,EUR,ingrid.hall@corp.com,failed,paypal,
+TXN2001160436,2024-08-12T16:54:00Z,PENDING,USD,camila.reddy@corp.com,pending,mastercard,
+TXN6768847217,2024-11-23T00:36:00Z,N/A,EUR,noah.patel@corp.com,completed,mastercard,first-time buyer
+TXN5812664833,2024-07-05T04:33:00Z,7445.00,GBP,marcus.khan@mail.com,completed,mastercard,
+TXN3842000330,2024-03-24T08:45:00Z,7417.00,USD,diego.tanaka@acme.com,refunded,visa,chargeback opened
+TXN2804258824,2024-09-13T09:51:00Z,"$4,739.96",USD,ethan.ferrari@co.com,completed,bank_transfer,
+TXN2640648159,2024-12-09T20:15:00Z,"£6,059.66",GBP,diego.brown@co.com,failed,visa,
+TXN5336243713,2024-08-11T21:48:00Z,7733.00,GBP,wei.ferrari@corp.com,refunded,paypal,verified by 3DS
+TXN4209424569,2024-06-24T22:23:00Z,3398.00,USD,amara.yusuf@biz.com,failed,mastercard,verified by 3DS
+TXN7940591937,2024-11-03T15:37:00Z,"€1,857.04",EUR,ingrid.sato@co.com,failed,paypal,
+TXN4354530724,2024-07-12T03:40:00Z,"€2,879.61",EUR,omar.costa@corp.com,pending,apple_pay,
+TXN3528902328,2024-04-01T19:34:00Z,"€4,195.20",EUR,diego.costa@mail.com,completed,visa,chargeback opened
+TXN5240025660,2024-01-01T03:05:00Z,"$4,083.00",USD,sofia.kovac@corp.com,refunded,paypal,chargeback opened
+TXN2430288059,2024-02-09T05:16:00Z,4785.00,EUR,sofia.rossi@co.com,completed,paypal,verified by 3DS
+TXN4458130969,2024-03-27T22:27:00Z,5389.00,GBP,amara.haddad@acme.com,pending,paypal,chargeback opened
+TXN8334784257,2024-08-26T07:39:00Z,"$1,080.75",USD,sofia.yusuf@biz.com,refunded,mastercard,
+TXN7584838219,2024-12-02T00:14:00Z,3540.00,GBP,camila.okoro@corp.com,failed,mastercard,
+TXN9154283790,2024-03-06T01:14:00Z,"€3,156.23",EUR,ingrid.sato@mail.com,refunded,paypal,first-time buyer
+TXN3206503246,2024-03-06T20:56:00Z,5174.00,USD,tomas.larsen@acme.com,pending,paypal,chargeback opened
+TXN4330438123,2024-02-22T02:39:00Z,8545.00,GBP,amara.moreno@biz.com,completed,paypal,
+TXN9306115946,2024-10-02T03:49:00Z,5219.00,EUR,ingrid.rossi@mail.com,pending,visa,
+TXN6758688998,2024-09-03T04:25:00Z,€580.38,EUR,wei.tanaka@acme.com,completed,paypal,
+TXN2745250411,2024-04-06T12:48:00Z,"$1,162.40",USD,diego.lindqvist@mail.com,failed,visa,
+TXN6955908531,2024-04-06T19:51:00Z,1921.00,GBP,omar.larsen@biz.com,pending,mastercard,
+TXN5413757928,2024-09-16T22:09:00Z,1758.00,EUR,lars.sato@mail.com,pending,paypal,
+TXN8573857928,2024-10-02T01:20:00Z,€928.00,EUR,tomas.sato@mail.com,failed,paypal,flagged for review
+TXN8197455038,2024-11-25T18:48:00Z,"€6,202.36",EUR,tomas.ferrari@acme.com,pending,mastercard,
+TXN1573774893,2024-09-23T10:42:00Z,5344.00,GBP,liam.brown@corp.com,failed,mastercard,
+TXN4596438319,2024-12-11T11:15:00Z,791.00,GBP,sofia.tanaka@acme.com,failed,visa,
+TXN7020876075,2024-08-13T09:40:00Z,"$1,113.63",USD,nadia.khan@biz.com,failed,paypal,
+TXN5588928372,2024-08-14T00:56:00Z,"£5,776.73",GBP,ethan.silva@corp.com,pending,paypal,
+TXN7739807151,2024-01-23T04:27:00Z,"£2,050.83",GBP,sofia.patel@co.com,failed,apple_pay,
+TXN2861731128,2024-07-21T22:04:00Z,951.00,USD,diego.kovac@mail.com,failed,paypal,first-time buyer
+TXN9403808463,2024-09-26T05:11:00Z,"$8,054.69",USD,aisha.ferrari@co.com,completed,apple_pay,
+TXN1916458305,2024-03-21T14:51:00Z,"$3,402.64",USD,aisha.moreno@corp.com,failed,apple_pay,
+TXN4323494818,2024-06-23T05:47:00Z,8413.00,USD,tomas.costa@mail.com,pending,apple_pay,
+TXN4051897312,2024-05-27T13:59:00Z,"$3,314.74",USD,chloe.nguyen@biz.com,completed,bank_transfer,chargeback opened
+TXN3743235668,2024-09-11T13:49:00Z,6805.00,GBP,camila.silva@corp.com,pending,mastercard,
+TXN2913572752,2024-03-07T18:20:00Z,"€4,972.39",EUR,kenji.dubois@mail.com,pending,bank_transfer,recurring subscription
+TXN6145179194,2024-10-17T04:32:00Z,7971.00,GBP,priya.silva@acme.com,failed,bank_transfer,
+TXN8903916255,2024-11-05T14:55:00Z,6970.00,EUR,fatima.costa@acme.com,completed,bank_transfer,flagged for review
+TXN3948465282,2024-11-12T21:54:00Z,6585.00,GBP,amara.sato@co.com,pending,paypal,verified by 3DS
+TXN5189676560,2024-10-11T15:28:00Z,"€2,993.36",EUR,ravi.bauer@mail.com,completed,paypal,first-time buyer
+TXN8976177967,2024-01-12T12:04:00Z,7818.00,EUR,noah.ferrari@co.com,completed,paypal,
+TXN1900661309,2024-12-26T04:09:00Z,N/A,EUR,omar.silva@corp.com,completed,bank_transfer,
+TXN5933048950,2024-04-02T23:31:00Z,"£1,759.18",GBP,camila.diallo@biz.com,completed,mastercard,
+TXN1167556268,2024-06-23T22:40:00Z,€629.10,EUR,priya.tanaka@biz.com,pending,visa,
+TXN7160944695,2024-07-14T08:28:00Z,"€3,249.46",EUR,tomas.reddy@acme.com,pending,mastercard,verified by 3DS
+TXN5354250667,2024-08-01T19:40:00Z,€970.57,EUR,yuki.yusuf@biz.com,pending,visa,first-time buyer
+TXN3775135861,2024-09-26T22:32:00Z,2872.00,EUR,aisha.brown@biz.com,pending,apple_pay,recurring subscription
+TXN2617480303,2024-05-07T21:50:00Z,"€5,473.61",EUR,lars.okoro@co.com,failed,paypal,
+TXN5246712850,2024-08-27T01:09:00Z,5523.00,EUR,diego.rossi@co.com,refunded,paypal,first-time buyer
+TXN9037029409,2024-08-24T08:05:00Z,£76.11,GBP,camila.larsen@mail.com,completed,visa,recurring subscription
+TXN2591340886,2024-09-17T16:27:00Z,3519.00,EUR,fatima.lindqvist@mail.com,refunded,paypal,recurring subscription
+TXN8213600954,2024-01-20T17:47:00Z,"£7,750.15",GBP,camila.hall@mail.com,refunded,mastercard,flagged for review
+TXN1147792808,2024-08-20T15:56:00Z,"$7,292.61",USD,wei.rossi@mail.com,failed,apple_pay,verified by 3DS
+TXN6412848443,2024-03-06T07:30:00Z,"£1,972.82",GBP,tomas.bauer@mail.com,completed,mastercard,verified by 3DS
+TXN2905003731,2024-02-14T15:51:00Z,"£4,951.98",GBP,yuki.yusuf@acme.com,refunded,mastercard,
+TXN6661868738,2024-03-05T15:30:00Z,"£3,215.33",GBP,ravi.bauer@co.com,failed,visa,
+TXN6874132203,2024-02-05T15:37:00Z,5387.00,GBP,omar.sato@biz.com,pending,paypal,
+TXN6851121583,2024-11-07T17:55:00Z,2036.00,EUR,ethan.yusuf@corp.com,failed,mastercard,
+TXN1304577635,2024-09-17T21:07:00Z,"€4,006.90",EUR,tomas.yusuf@acme.com,failed,visa,verified by 3DS
+TXN6499663900,2024-10-23T00:32:00Z,£34.34,GBP,diego.brown@co.com,pending,visa,
+TXN9445646905,2024-07-23T00:04:00Z,"$3,677.13",USD,lars.lindqvist@biz.com,completed,paypal,
+TXN8101457885,2024-03-12T23:23:00Z,€366.03,EUR,mateo.hall@mail.com,failed,paypal,
+TXN4439692713,2024-03-10T16:36:00Z,"$2,489.19",USD,fatima.tanaka@co.com,refunded,bank_transfer,recurring subscription
+TXN1024676161,2024-06-08T02:53:00Z,956.00,USD,ravi.khan@biz.com,refunded,paypal,recurring subscription
+TXN1777023151,2024-02-09T02:49:00Z,$806.57,USD,yuki.rossi@mail.com,completed,bank_transfer,
+TXN7150185593,2024-02-23T16:27:00Z,"€4,008.87",EUR,priya.khan@acme.com,refunded,visa,
+TXN4078517833,2024-09-13T05:14:00Z,$961.36,USD,ethan.kovac@biz.com,failed,bank_transfer,
+TXN1433673338,2024-07-03T17:43:00Z,€63.89,EUR,omar.brown@mail.com,pending,paypal,
+TXN2849882081,2024-03-03T02:03:00Z,625.00,USD,mateo.kovac@mail.com,completed,bank_transfer,first-time buyer
+TXN7218597693,2024-02-19T15:08:00Z,3183.00,EUR,marcus.rossi@biz.com,refunded,mastercard,
+TXN1321704147,2024-06-08T01:14:00Z,"£3,033.74",GBP,fatima.bauer@mail.com,pending,paypal,recurring subscription
+TXN1567037369,2024-09-24T13:55:00Z,2655.00,EUR,tomas.ferrari@corp.com,failed,visa,chargeback opened
+TXN2518831472,2024-05-19T10:54:00Z,"$3,625.00",USD,camila.costa@co.com,refunded,apple_pay,
+TXN5251133984,2024-10-09T21:32:00Z,3350.00,GBP,marcus.dubois@acme.com,refunded,bank_transfer,
+TXN3045911743,2024-12-28T16:34:00Z,8718.00,USD,amara.costa@mail.com,failed,bank_transfer,
+TXN8997848309,2024-12-10T14:23:00Z,"€7,911.41",EUR,sofia.brown@corp.com,pending,bank_transfer,
+TXN5556405359,2024-06-14T01:27:00Z,"€6,008.88",EUR,lars.dubois@mail.com,pending,paypal,
+TXN3092522762,2024-12-05T10:54:00Z,"£3,052.62",GBP,diego.larsen@mail.com,refunded,mastercard,
+TXN6348856056,2024-01-28T05:57:00Z,"£3,009.91",GBP,liam.moreno@biz.com,pending,mastercard,flagged for review
+TXN9540002739,2024-01-13T12:11:00Z,4455.00,USD,amara.okoro@mail.com,completed,paypal,
+TXN6290243560,2024-02-07T22:54:00Z,"$3,092.26",USD,tomas.silva@biz.com,failed,visa,chargeback opened
+TXN6208979413,2024-05-14T11:00:00Z,1479.00,GBP,tomas.tanaka@mail.com,refunded,mastercard,
+TXN9752983910,2024-09-26T09:17:00Z,"$5,469.75",USD,ravi.lindqvist@biz.com,refunded,visa,chargeback opened
+TXN8912027362,2024-09-13T05:51:00Z,"€3,737.76",EUR,kenji.bauer@biz.com,completed,paypal,recurring subscription
+TXN6084475089,2024-01-14T13:32:00Z,£40.08,GBP,ingrid.haddad@mail.com,failed,mastercard,chargeback opened
+TXN1899868512,2024-07-12T10:38:00Z,1872.00,EUR,lars.costa@co.com,failed,paypal,chargeback opened
+TXN2406879637,2024-06-22T03:21:00Z,6056.00,GBP,priya.moreno@acme.com,failed,mastercard,
+TXN2109683884,2024-03-26T22:29:00Z,3244.00,GBP,priya.brown@acme.com,completed,bank_transfer,verified by 3DS
+TXN1742993197,2024-11-06T22:11:00Z,"€6,582.86",EUR,grace.ferrari@co.com,pending,apple_pay,verified by 3DS
+TXN1477892716,2024-05-10T09:43:00Z,"€4,763.70",EUR,elena.costa@co.com,pending,bank_transfer,
+TXN9845019167,2024-02-03T19:39:00Z,2073.00,GBP,liam.khan@co.com,pending,paypal,
+TXN8251965846,2024-09-08T05:12:00Z,£387.02,GBP,yuki.ferrari@mail.com,completed,mastercard,
+TXN8306744436,2024-11-09T09:58:00Z,$373.79,USD,camila.rossi@corp.com,refunded,apple_pay,flagged for review
+TXN7666491557,2024-10-20T04:24:00Z,970.00,USD,wei.costa@biz.com,refunded,bank_transfer,verified by 3DS
+TXN6607575322,2024-01-08T03:13:00Z,"$4,611.34",USD,ingrid.brown@biz.com,failed,apple_pay,
+TXN9303762570,2024-03-17T04:27:00Z,"£5,853.51",GBP,priya.reddy@co.com,pending,mastercard,
+TXN5815479547,2024-05-13T18:37:00Z,1550.00,EUR,elena.sato@biz.com,completed,paypal,flagged for review
+TXN4705566144,2024-11-14T14:27:00Z,"$2,060.89",USD,ethan.lindqvist@biz.com,pending,visa,
+TXN7159010392,2024-05-05T03:11:00Z,"£2,447.40",GBP,camila.khan@corp.com,pending,bank_transfer,first-time buyer
+TXN2908281665,2024-11-19T03:34:00Z,N/A,EUR,diego.kovac@mail.com,pending,apple_pay,verified by 3DS
+TXN2318593950,2024-05-18T23:51:00Z,"€1,713.61",EUR,kenji.nguyen@co.com,completed,mastercard,
+TXN2075322878,2024-05-15T07:23:00Z,4144.00,EUR,tomas.moreno@acme.com,pending,visa,
+TXN5276920054,2024-04-12T01:20:00Z,7414.00,USD,amara.moreno@co.com,refunded,mastercard,
+TXN8548895580,2024-05-06T13:57:00Z,8395.00,GBP,diego.kovac@acme.com,pending,bank_transfer,first-time buyer
+TXN1038211388,2024-05-21T15:40:00Z,"£8,338.15",GBP,priya.kovac@biz.com,pending,paypal,recurring subscription
+TXN8120197032,2024-01-13T14:46:00Z,3356.00,GBP,yuki.dubois@co.com,pending,paypal,
+TXN4470846639,2024-02-03T23:41:00Z,"£1,299.36",GBP,sofia.haddad@acme.com,failed,mastercard,
+TXN6583927648,2024-08-13T03:27:00Z,"£6,803.15",GBP,tomas.diallo@corp.com,failed,bank_transfer,
+TXN3518106882,2024-11-15T08:55:00Z,6446.00,EUR,elena.hall@biz.com,refunded,apple_pay,
+TXN4599199543,2024-02-18T00:26:00Z,8512.00,GBP,sofia.nguyen@co.com,refunded,paypal,
+TXN6907554802,2024-03-26T15:05:00Z,1681.00,USD,aisha.okoro@corp.com,pending,visa,chargeback opened
+TXN9456243225,2024-08-09T18:15:00Z,"£8,486.09",GBP,yuki.nguyen@co.com,completed,apple_pay,

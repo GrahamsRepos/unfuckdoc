@@ -16,8 +16,11 @@ MARGIN = 0.25          # confidence-margin gate; below this -> escalate to LLM
 LLM_CALLS = {"n": 0}   # visible counter
 
 BOOL={"true","false","yes","no"}; EMAIL=re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_MONEY=re.compile(r"[,\s$€£¥₹]")                 # thousands separators + common currency symbols
+def _denum(s):
+    return _MONEY.sub("", str(s))
 def _num(v):
-    try: float(str(v).replace(",","").replace("$","")); return True
+    try: float(_denum(v)); return True
     except: return False
 def _date(v):
     try: pd.to_datetime(str(v),errors="raise"); return True
@@ -136,7 +139,7 @@ class LSA:
 def _clean_cell(raw, kind):
     """Coerce one populated cell to its typed value; returns (value, was_coerced) or raises."""
     if kind == "numeric":
-        cln = raw.replace(",", "").replace("$", ""); return float(cln), (cln != raw)
+        cln = _denum(raw); return float(cln), (cln != raw)
     if kind == "boolean":
         return raw.lower() in {"true", "yes"}, False
     if kind == "date":
@@ -336,7 +339,7 @@ def run(path):
             try:
                 raw=str(v)
                 if i["kind"]=="numeric":
-                    cln=raw.replace(",","").replace("$",""); doc[c]=float(cln); coerced+=(cln!=raw)
+                    cln=_denum(raw); doc[c]=float(cln); coerced+=(cln!=raw)
                 elif i["kind"]=="boolean": doc[c]=raw.lower() in {"true","yes"}
                 elif i["kind"]=="date": doc[c]=pd.to_datetime(v).strftime("%Y-%m-%d")
                 else: doc[c]=raw
