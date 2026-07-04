@@ -267,7 +267,7 @@
       </div>
       <p class="hint" style="margin:10px 0 0">Search free text (semantic/keyword), narrow by an extracted <b>tag</b>,
          and/or add <b>field filters</b> (e.g. <code>first_name = Aisha</code>, <code>country = Japan</code>,
-         <code>interests = solar</code>). Leave the text box empty to just filter.</p>
+         <code>interests = solar</code>). Leave everything empty and hit Search to browse all records.</p>
       <div id="results"></div>
     </div>
   </div>
@@ -643,7 +643,6 @@ $('#q').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
 
 async function doSearch(){
   const q=$('#q').value.trim(); const tag=$('#tag').value;
-  if(!q && !tag && !FILTERS.length){ $('#results').innerHTML='<div class="empty">enter a query, pick a tag, or add a field filter</div>'; return; }
   const body={q, tag, filters:FILTERS, mode:$('#mode').value, field:$('#field').value, size:12};
   const d=await jpost('/api/search', body);
   const box=$('#results');

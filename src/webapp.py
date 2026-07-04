@@ -261,8 +261,7 @@ def search():
     tag = (body.get("tag") or "").strip()
     filters = [f for f in (body.get("filters") or []) if f.get("field") and f.get("value") != ""]
     field = body.get("field") or (res["fuzzy"][0] if res["fuzzy"] else None)
-    if not q and not tag and not filters:
-        return jsonify(error="enter a query, pick a tag, or add a field filter"), 400
+    # empty query with no tag/filters -> match any (browse all docs)
 
     # a doc passes if it carries the tag AND matches every field filter (case-insensitive contains)
     def keep(i):
