@@ -5,3 +5,4 @@ yake
 joblib
 opensearch-py
 openpyxl
+flask

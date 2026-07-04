@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>unfuckdoc — CSV → clean → unify → search</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b22; --panel2:#1c2230; --line:#2b3240; --ink:#e6edf3;
+    --mut:#8b96a5; --acc:#4c9be8; --good:#3fb950; --warn:#d29922; --bad:#f85149;
+    --pill:#233044; --num:#4c9be8; --enum:#a371f7; --text:#3fb950; --date:#d29922;
+    --id:#8b96a5; --bool:#e36209;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc)}
+  header{padding:20px 28px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  header h1{font-size:19px;margin:0;letter-spacing:.3px}
+  header .sub{color:var(--mut);font-size:13px}
+  main{max-width:1180px;margin:0 auto;padding:22px 28px 80px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:20px}
+  .card h2{margin:0 0 4px;font-size:15px}
+  .card .hint{color:var(--mut);font-size:12.5px;margin:0 0 14px}
+  .row{display:flex;gap:20px;flex-wrap:wrap}
+  .row>.card{flex:1;min-width:320px}
+  /* upload */
+  .uploader{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--acc);color:#06121f;border:0;border-radius:8px;padding:9px 15px;font-weight:600;cursor:pointer;font-size:13.5px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+  select,input[type=text]{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+       border-radius:8px;padding:9px 11px;font-size:13.5px}
+  label.file{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px dashed var(--line);
+       border-radius:8px;padding:9px 14px;cursor:pointer}
+  label.file input{display:none}
+  .status{color:var(--mut);font-size:13px}
+  /* stat chips */
+  .stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:96px}
+  .stat b{display:block;font-size:22px;line-height:1.2}
+  .stat span{color:var(--mut);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px}
+  .stat.ok b{color:var(--good)} .stat.warn b{color:var(--warn)}
+  /* table */
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;background:var(--panel)}
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  .kind{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11.5px;font-weight:600}
+  .k-numeric{background:#12314f;color:#79c0ff}
+  .k-enum{background:#2a1b45;color:#d2a8ff}
+  .k-free_text{background:#12331f;color:#7ee787}
+  .k-date{background:#3a2d0c;color:#e3b341}
+  .k-identifier{background:#21262d;color:#adbac7}
+  .k-boolean{background:#3a1e0c;color:#ffa657}
+  .canon{color:#7ee787;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .mut{color:var(--mut)} .no{color:var(--bad)}
+  .bar{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;min-width:60px}
+  .bar>i{display:block;height:100%;background:var(--acc)}
+  /* donut */
+  .donut-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+  .donut{width:150px;height:150px;border-radius:50%;flex:0 0 auto}
+  .legend{list-style:none;margin:0;padding:0;font-size:13px}
+  .legend li{display:flex;align-items:center;gap:8px;margin:3px 0}
+  .legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  /* merge groups */
+  .merge{display:flex;flex-direction:column;gap:8px}
+  .mgroup{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2)}
+  .mgroup .to{color:#7ee787;font-family:ui-monospace,Menlo,monospace;font-weight:700}
+  .arrow{color:var(--mut)}
+  .src{background:var(--pill);border-radius:6px;padding:2px 8px;font-size:12px}
+  .mgroup.unified{border-color:#2c5138}
+  .badge{font-size:10.5px;background:#12331f;color:#7ee787;border-radius:20px;padding:1px 8px;margin-left:auto}
+  /* tags */
+  .tagbars{display:flex;flex-direction:column;gap:5px}
+  .tagbar{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;font-size:12.5px}
+  .tagbar .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tagbar .b{height:14px;background:linear-gradient(90deg,#a371f7,#4c9be8);border-radius:4px}
+  .tagbar .n{color:var(--mut);text-align:right}
+  /* search */
+  .searchbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .searchbar input[type=text]{flex:1;min-width:220px}
+  .score{font-family:ui-monospace,Menlo,monospace;color:var(--acc)}
+  .kws{display:flex;gap:5px;flex-wrap:wrap}
+  .kw{background:var(--pill);border-radius:20px;padding:1px 8px;font-size:11px;color:#d2a8ff}
+  .empty{color:var(--mut);text-align:center;padding:34px}
+  .osline{font-size:12.5px;margin-top:8px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+  code{background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:12px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧹 unfuckdoc</h1>
+  <span class="sub">upload any messy CSV → classify · clean · <b>unify into a canonical structure</b> · extract tags · search</span>
+</header>
+
+<main>
+  <!-- UPLOAD -->
+  <div class="card">
+    <div class="uploader">
+      <label class="file">📄 Choose CSV<input id="file" type="file" accept=".csv"></label>
+      <span class="mut">or a bundled sample:</span>
+      <select id="samples"><option value="">— sample —</option></select>
+      <button class="btn ghost" id="loadSample">Load</button>
+      <span class="status" id="status"></span>
+    </div>
+    <div class="osline" id="osline"></div>
+  </div>
+
+  <div id="dash" class="hidden">
+    <!-- SUMMARY -->
+    <div class="card">
+      <h2 id="fileTitle"></h2>
+      <p class="hint">How the file was processed. The whole classification is <b>deterministic</b> unless a column is
+         ambiguous — only then does it escalate to an LLM (counted below).</p>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="row">
+      <!-- TYPE DONUT -->
+      <div class="card">
+        <h2>Column types</h2>
+        <p class="hint">Inferred from a statistical sample of each column.</p>
+        <div class="donut-wrap">
+          <div class="donut" id="donut"></div>
+          <ul class="legend" id="legend"></ul>
+        </div>
+      </div>
+      <!-- FILL RATES -->
+      <div class="card">
+        <h2>Coverage (fill rate)</h2>
+        <p class="hint">Nulls are coverage, not signal — sparse columns stay first-class.</p>
+        <div id="fills"></div>
+      </div>
+    </div>
+
+    <!-- MERGE GROUPS -->
+    <div class="card">
+      <h2>Canonical structure — unified fields</h2>
+      <p class="hint">Synonymous column names collapse onto one canonical field (type-gated, so a mislabeled column
+         is never force-merged). Upload differently-named files and watch them line up on the same fields.</p>
+      <div class="merge" id="merge"></div>
+    </div>
+
+    <!-- CROSS-FILE REGISTRY -->
+    <div class="card" id="regCard">
+      <h2>Unified schema across all uploaded files
+        <button class="btn ghost" id="resetReg" style="float:right;padding:4px 10px;font-size:12px">reset</button></h2>
+      <p class="hint">This registry accumulates across every CSV you upload. Load the three customer samples
+         (<code>crm_contacts</code>, <code>sales_leads</code>, <code>subscribers</code>) one after another and watch
+         differently-named columns collapse onto the same canonical field.</p>
+      <div class="merge" id="registry"></div>
+    </div>
+
+    <!-- CLASSIFICATION TABLE -->
+    <div class="card">
+      <h2>Per-column classification</h2>
+      <p class="hint"><b>margin</b> = confidence gap to the runner-up class; below the gate a column would escalate to the LLM.</p>
+      <div class="scroll">
+        <table id="cols"><thead><tr>
+          <th>Column</th><th>Kind</th><th>Canonical</th><th>Fill</th><th>Margin</th><th>Source</th><th>Searchable</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <!-- TAGS -->
+    <div class="card" id="tagCard">
+      <h2>Extracted tags / keywords</h2>
+      <p class="hint">Pulled from free-text columns (YAKE) — these are the facets you can search & segment on.</p>
+      <div id="tags"></div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="card">
+      <h2>Search the fields</h2>
+      <div class="searchbar">
+        <select id="mode">
+          <option value="semantic">Semantic (vector)</option>
+          <option value="keyword">Keyword</option>
+        </select>
+        <select id="field"></select>
+        <input id="q" type="text" placeholder="e.g. churn risk, upsell opportunity, crisp citrus…">
+        <button class="btn" id="go">Search</button>
+      </div>
+      <div id="results"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const el = (t, c, h) => { const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e; };
+const KCOL = {numeric:'#4c9be8', enum:'#a371f7', free_text:'#3fb950', date:'#d29922', identifier:'#8b96a5', boolean:'#e36209', empty:'#5a6472'};
+let DATA = null;
+
+async function jpost(url, body){
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body||{})});
+  return r.json();
+}
+
+// ---- upload handlers ----
+$('#file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if(!f) return;
+  setStatus(`processing ${f.name}…`);
+  const fd = new FormData(); fd.append('file', f);
+  const r = await fetch('/api/upload', {method:'POST', body:fd});
+  const d = await r.json();
+  if(d.error){ setStatus('⚠ '+d.error); return; }
+  render(d);
+});
+$('#loadSample').addEventListener('click', async () => {
+  const name = $('#samples').value; if(!name) return;
+  setStatus(`processing ${name}…`);
+  const d = await jpost('/api/load_sample', {name});
+  if(d.error){ setStatus('⚠ '+d.error); return; }
+  render(d);
+});
+function setStatus(t){ $('#status').textContent = t; }
+
+// ---- load sample list ----
+(async () => {
+  const d = await (await fetch('/api/samples')).json();
+  const sel = $('#samples');
+  (d.samples||[]).forEach(s => sel.appendChild(el('option', null, s)).value = s);
+  const cur = await (await fetch('/api/overview')).json();
+  if(cur.loaded) render(cur);
+})();
+
+// ---- main render ----
+function render(d){
+  DATA = d;
+  setStatus('✓ done');
+  $('#dash').classList.remove('hidden');
+  $('#fileTitle').textContent = d.filename;
+  osLine(d.opensearch);
+
+  // stats
+  const llmOk = d.llm_calls === 0;
+  $('#stats').innerHTML = '';
+  const stat = (v,l,cls)=>{ const s=el('div','stat '+(cls||'')); s.appendChild(el('b',null,v)); s.appendChild(el('span',null,l)); $('#stats').appendChild(s); };
+  stat(d.n_rows.toLocaleString(),'rows');
+  stat(d.n_cols,'columns');
+  stat((d.merge_groups.filter(g=>g.unified).length),'unified fields', d.merge_groups.some(g=>g.unified)?'ok':'');
+  stat(d.llm_calls, 'LLM calls', llmOk?'ok':'warn');
+  stat(d.coerced,'cells coerced');
+  stat(d.quarantine,'quarantined', d.quarantine?'warn':'');
+
+  donut(d.kind_counts);
+  fills(d.columns);
+  merge(d.merge_groups);
+  registry(d.registry);
+  colsTable(d.columns);
+  tags(d.tags);
+  searchSetup(d);
+}
+
+function osLine(os){
+  const o = $('#osline'); if(!os){o.textContent='';return;}
+  const map = {indexed:['#3fb950',`indexed ${os.count} docs into OpenSearch index `],
+               unavailable:['#8b96a5','OpenSearch not running — search still works in-memory. '],
+               error:['#d29922','OpenSearch error (search still works in-memory): '],
+               'no-client':['#8b96a5','opensearch-py absent — in-memory only. ']};
+  const m = map[os.status] || ['#8b96a5', os.status+' '];
+  o.innerHTML = `<span class="dot" style="background:${m[0]}"></span>${m[1]}` + (os.index?`<code>${os.index}</code>`:'') + (os.detail?` <span class="mut">(${os.detail})</span>`:'');
+}
+
+// ---- donut via conic-gradient ----
+function donut(counts){
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const total = entries.reduce((s,[,n])=>s+n,0) || 1;
+  let acc=0, seg=[];
+  entries.forEach(([k,n])=>{ const a=acc/total*360, b=(acc+n)/total*360; seg.push(`${KCOL[k]||'#888'} ${a}deg ${b}deg`); acc+=n; });
+  $('#donut').style.background = `conic-gradient(${seg.join(',')})`;
+  $('#donut').style.mask = 'radial-gradient(farthest-side, transparent 52%, #000 54%)';
+  $('#donut').style.webkitMask = 'radial-gradient(farthest-side, transparent 52%, #000 54%)';
+  const lg = $('#legend'); lg.innerHTML='';
+  entries.forEach(([k,n])=>{
+    const li=el('li'); li.appendChild(el('span','sw')).style.background=KCOL[k]||'#888';
+    li.appendChild(el('span',null,`<b>${k}</b> · ${n} (${Math.round(n/total*100)}%)`));
+    lg.appendChild(li);
+  });
+}
+
+function fills(cols){
+  const box=$('#fills'); box.innerHTML='';
+  cols.forEach(c=>{
+    const pct=Math.round((c.fill_rate||0)*100);
+    const r=el('div'); r.style.cssText='display:grid;grid-template-columns:160px 1fr 42px;gap:10px;align-items:center;margin:4px 0;font-size:12.5px';
+    r.appendChild(el('span','t', c.name.length>22?c.name.slice(0,21)+'…':c.name));
+    const bar=el('div','bar'); const fill=el('i'); fill.style.width=pct+'%';
+    fill.style.background = pct<50?'#d29922':'#4c9be8'; bar.appendChild(fill); r.appendChild(bar);
+    r.appendChild(el('span','n mut', pct+'%'));
+    box.appendChild(r);
+  });
+}
+
+function merge(groups){
+  const box=$('#merge'); box.innerHTML='';
+  groups.forEach(g=>{
+    const row=el('div','mgroup'+(g.unified?' unified':''));
+    row.appendChild(el('span','to', g.canonical));
+    row.appendChild(el('span','arrow','◄'));
+    g.columns.forEach(c=> row.appendChild(el('span','src', c)));
+    if(g.unified) row.appendChild(el('span','badge', `${g.columns.length} merged`));
+    box.appendChild(row);
+  });
+}
+
+function registry(groups){
+  const box=$('#registry'); box.innerHTML='';
+  if(!groups || !groups.length){ box.innerHTML='<div class="mut">upload a file to start building the unified schema</div>'; return; }
+  groups.forEach(g=>{
+    const row=el('div','mgroup'+(g.unified?' unified':''));
+    row.appendChild(el('span','to', g.canonical));
+    row.appendChild(el('span','arrow','◄'));
+    g.sources.forEach(s=> row.appendChild(el('span','src', s.ref)));
+    if(g.unified) row.appendChild(el('span','badge', `${g.n_files} files`));
+    box.appendChild(row);
+  });
+}
+$('#resetReg').addEventListener('click', async ()=>{ await jpost('/api/reset_registry',{}); if(DATA){ DATA.registry=[]; registry([]); } });
+
+function colsTable(cols){
+  const tb=$('#cols').querySelector('tbody'); tb.innerHTML='';
+  cols.forEach(c=>{
+    const tr=el('tr');
+    tr.appendChild(el('td', null, `<b>${c.name}</b>` + (c.note?`<br><span class="mut" style="font-size:11px">${c.note}</span>`:'')));
+    tr.appendChild(el('td', null, `<span class="kind k-${c.kind}">${c.kind}</span>`));
+    tr.appendChild(el('td', null, `<span class="canon">${c.canonical}</span>` + (c.canonical_method==='alias'?'':` <span class="mut" style="font-size:10px">(self)</span>`)));
+    tr.appendChild(el('td', null, `<span class="mut">${Math.round((c.fill_rate||0)*100)}%</span>`));
+    tr.appendChild(el('td', null, c.margin!=null?c.margin:'—'));
+    tr.appendChild(el('td', null, c.source==='LLM'?`<span class="no">LLM</span>`:`<span class="mut">${c.source}</span>`));
+    tr.appendChild(el('td', null, c.searchable?'✓':'<span class="no">✗</span>'));
+    tb.appendChild(tr);
+  });
+}
+
+function tags(tagsByCol){
+  const box=$('#tags'); box.innerHTML='';
+  const cols=Object.keys(tagsByCol||{});
+  if(!cols.length){ $('#tagCard').classList.add('hidden'); return; }
+  $('#tagCard').classList.remove('hidden');
+  cols.forEach(col=>{
+    const items=tagsByCol[col]; if(!items.length) return;
+    box.appendChild(el('div','mut', `<b style="color:var(--ink)">${col}</b> — top keywords`)).style.margin='2px 0 8px';
+    const max=items[0][1];
+    const wrap=el('div','tagbars');
+    items.slice(0,15).forEach(([t,n])=>{
+      const r=el('div','tagbar');
+      r.appendChild(el('span','t', t));
+      const b=el('div','b'); b.style.width=Math.max(4,Math.round(n/max*100))+'%'; r.appendChild(b);
+      r.appendChild(el('span','n', n));
+      wrap.appendChild(r);
+    });
+    box.appendChild(wrap);
+  });
+}
+
+function searchSetup(d){
+  const fsel=$('#field'); fsel.innerHTML='';
+  (d.fuzzy||[]).forEach(f=> fsel.appendChild(el('option',null,f)).value=f);
+  const hasText = (d.fuzzy||[]).length>0;
+  $('#mode').value = hasText?'semantic':'keyword';
+  fsel.classList.toggle('hidden', !hasText);
+  $('#results').innerHTML='';
+  toggleField();
+}
+$('#mode').addEventListener('change', toggleField);
+function toggleField(){
+  const semantic = $('#mode').value==='semantic';
+  $('#field').classList.toggle('hidden', !semantic || !(DATA && DATA.fuzzy.length));
+}
+$('#go').addEventListener('click', doSearch);
+$('#q').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
+
+async function doSearch(){
+  const q=$('#q').value.trim(); if(!q) return;
+  const body={q, mode:$('#mode').value, field:$('#field').value, size:12};
+  const d=await jpost('/api/search', body);
+  const box=$('#results');
+  if(d.error){ box.innerHTML=`<div class="empty">⚠ ${d.error}</div>`; return; }
+  if(!d.results.length){ box.innerHTML=`<div class="empty">no matches</div>`; return; }
+  const cols=d.display_columns.filter(c=> d.results.some(r=> c in r.row));
+  let html='<div class="scroll"><table><thead><tr><th>score</th>';
+  cols.forEach(c=> html+=`<th>${c.replace(/_summary$/,' ✎')}</th>`);
+  html+='<th>tags</th></tr></thead><tbody>';
+  d.results.forEach(r=>{
+    html+=`<tr><td class="score">${r.score}</td>`;
+    cols.forEach(c=>{ let v=r.row[c]; if(v==null)v='<span class="mut">—</span>'; else v=String(v);
+      if(c.endsWith('_summary')&&v.length>140)v=v.slice(0,140)+'…';
+      html+=`<td>${v}</td>`; });
+    html+=`<td><div class="kws">${(r.keywords||[]).map(k=>`<span class="kw">${k}</span>`).join('')}</div></td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  box.innerHTML=html;
+}
+</script>
+</body>
+</html>

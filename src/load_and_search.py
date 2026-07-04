@@ -13,15 +13,15 @@ client=OpenSearch(hosts=[{"host":"localhost","port":9200}], use_ssl=False)  # se
 emb=joblib.load("embedder.pkl")           # same model used at ingest -> embed queries consistently
 
 # 1) create index from the generated mapping
-if client.indices.exists(INDEX): client.indices.delete(INDEX)
-client.indices.create(INDEX, body=json.load(open("wine_mapping.json")))
+if client.indices.exists(index=INDEX): client.indices.delete(index=INDEX)
+client.indices.create(index=INDEX, body=json.load(open("wine_mapping.json")))
 
 # 2) bulk load
 def actions():
     L=open("wine_bulk.ndjson").read().splitlines()
     for i in range(0,len(L),2):
         m=json.loads(L[i])["index"]; yield {"_index":INDEX,"_id":m["_id"],"_source":json.loads(L[i+1])}
-helpers.bulk(client, actions()); client.indices.refresh(INDEX)
+helpers.bulk(client, actions()); client.indices.refresh(index=INDEX)
 print("loaded", client.count(index=INDEX)["count"], "docs\n")
 
 def show(res):

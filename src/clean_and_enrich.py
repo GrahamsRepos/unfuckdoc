@@ -61,6 +61,57 @@ def llm_classify(col, sample, scores):
        Production: send column name + masked samples + stats, get one of the fixed classes back."""
     return max(scores, key=scores.get)          # POC fallback = deterministic best guess
 
+# ---- canonical column-name unification (deterministic, offline) ----
+# Map synonymous column NAMES (Price/Cost/Amt, email/e-mail, qty/quantity...) onto one canonical
+# field so data from different CSVs unifies into a single structure. Gated by TYPE COMPATIBILITY:
+# a name that looks like "price" but is free_text will NOT be forced onto the numeric canonical
+# (never force a confident lie — degrade to the column's own name instead).
+_STR={"enum","identifier","free_text"}
+CANON=[   # (canonical, {alias tokens}, {compatible kinds} or None=any)
+ ("amount",     {"price","cost","amt","amount","value","total","subtotal","fee","charge","salary",
+                 "revenue","spend","balance","budget","mrr","arr","payment","paid"}, {"numeric"}),
+ ("quantity",   {"qty","quantity","count","units","unit","stock","inventory"}, {"numeric"}),
+ ("rating",     {"rating","score","points","point","stars","star","rank","grade"}, {"numeric"}),
+ ("age",        {"age","years"}, {"numeric"}),
+ ("email",      {"email","emails","mail","e"}, _STR),
+ ("phone",      {"phone","tel","telephone","mobile","cell","fax","msisdn"}, _STR),
+ ("first_name", {"firstname","fname","givenname","given","forename","first"}, _STR),
+ ("last_name",  {"lastname","lname","surname","familyname","family","last"}, _STR),
+ ("full_name",  {"name","fullname","contact","person","taster"}, _STR),
+ ("company",    {"company","organization","organisation","org","employer","business","vendor",
+                 "supplier","winery","brand","account","firm"}, _STR),
+ ("job_title",  {"title","jobtitle","role","position","designation","occupation"}, _STR),
+ ("country",    {"country","nation","countrycode"}, _STR),
+ ("region",     {"region","state","province","county","territory","area"}, _STR),
+ ("city",       {"city","town","municipality"}, _STR),
+ ("address",    {"address","addr","street"}, None),
+ ("postal_code",{"zip","zipcode","postal","postcode","postalcode"}, _STR),
+ ("date",       {"date","datetime","timestamp","created","updated","modified","day","time"}, {"date","numeric"}),
+ ("url",        {"url","link","website","site","web","homepage","handle"}, _STR),
+ ("identifier", {"id","identifier","uuid","guid","key","ref","reference","sku","code"}, {"identifier","numeric"}),
+ ("gender",     {"gender","sex"}, {"enum"}),
+ ("currency",   {"currency","ccy"}, {"enum","identifier"}),
+ ("description",{"description","desc","notes","note","comment","comments","summary","bio",
+                 "review","text","details","detail","remarks","about","content"}, {"free_text","identifier","enum"}),
+]
+def _name_tokens(name):
+    s=re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", str(name))          # split camelCase
+    parts=re.split(r"[^A-Za-z0-9]+", s.lower())                   # split snake/space/hyphen
+    return [p for p in parts if p and not p.isdigit()]            # drop empties & pure numbers (region_1 -> region)
+def canonicalize(name, kind):
+    """Return (canonical, confidence, method). Best alias hit wins; type-gated; else identity."""
+    toks=set(_name_tokens(name))
+    best=None
+    for canon,aliases,types in CANON:
+        if types is not None and kind not in types: continue     # type ∩ tag: skip incompatible
+        hit=toks & aliases
+        if hit:
+            alen=max(len(a) for a in hit)                        # prefer the more specific (longer) alias
+            if best is None or alen>best[0]: best=(alen, canon)
+    if best: return best[1], 0.9, "alias"
+    ident="_".join(_name_tokens(name)) or str(name).lower()      # unmatched -> its own normalized name
+    return ident, 0.0, "identity"
+
 # ---- fuzzy-text enrichers (offline; swap for real models) ----
 def summarise(t, k=1):
     ss=[s.strip() for s in re.split(r'(?<=[.!?])\s+', t) if s.strip()]
@@ -79,6 +130,74 @@ class LSA:
     def tf(s,t): return s._n(s.s.transform(s.v.transform(t)))
     @staticmethod
     def _n(M): n=np.linalg.norm(M,axis=1,keepdims=True); n[n==0]=1; return M/n
+
+def process_dataframe(df, vec_dim=64, sample=1500):
+    """In-memory, side-effect-free variant of run(): classify -> clean -> enrich a DataFrame
+    and return everything the web UI needs. Mirrors run() exactly but returns data instead of
+    printing / writing files. Resets the per-run LLM counter so escalations are scoped to this call."""
+    LLM_CALLS["n"]=0
+    n=len(df)
+
+    # ---- classify every column (minimal LLM) with null-aware fill-rate ----
+    catalog={}
+    for c in df.columns:
+        col=df[c]
+        populated=[x for x in col.tolist() if pd.notna(x) and str(x).strip()!=""]
+        info=classify(c, populated[:sample])
+        info["fill_rate"]=round(len(populated)/n,3) if n else 0.0
+        if info.get("kind")=="numeric" and info.get("distinct_ratio",0)>0.99 and c.lower().startswith("unnamed"):
+            info["searchable"]=False; info["note"]="looks like a row index — excluded"
+        else:
+            info["searchable"]=info["os_type"] is not None
+        catalog[c]=info
+    fuzzy=[c for c,i in catalog.items() if i.get("kind")=="free_text"]
+
+    # ---- canonical name unification (unify columns across CSVs into one structure) ----
+    merge_groups={}
+    for c,i in catalog.items():
+        canon,conf,method=canonicalize(c, i.get("kind"))
+        i["canonical"]=canon; i["canonical_confidence"]=conf; i["canonical_method"]=method
+        merge_groups.setdefault(canon, []).append(c)
+
+    # ---- clean + build docs ----
+    emb={c: LSA(vec_dim).fit(df[c].fillna("").astype(str).tolist()) for c in fuzzy}
+    coerced=quarantine=0; docs=[]
+    for _,row in df.iterrows():
+        doc={}
+        for c,i in catalog.items():
+            if not i.get("searchable"): continue
+            v=row[c]
+            if pd.isna(v) or str(v).strip()=="": continue
+            try:
+                raw=str(v)
+                if i["kind"]=="numeric":
+                    cln=raw.replace(",","").replace("$",""); doc[c]=float(cln); coerced+=(cln!=raw)
+                elif i["kind"]=="boolean": doc[c]=raw.lower() in {"true","yes"}
+                elif i["kind"]=="date": doc[c]=pd.to_datetime(v).strftime("%Y-%m-%d")
+                else: doc[c]=raw
+            except Exception:
+                quarantine+=1; continue
+        for c in fuzzy:
+            t=str(row[c]); doc[f"{c}_summary"]=summarise(t)
+            doc[f"{c}_keywords"]=keywords(t); doc[f"{c}_vector"]=[round(float(x),5) for x in emb[c].tf([t])[0]]
+        docs.append(doc)
+
+    # ---- OpenSearch mapping ----
+    props={}
+    for c,i in catalog.items():
+        if not i.get("searchable"): continue
+        props[c]={"type":i["os_type"]}
+        if c in fuzzy:
+            props[f"{c}_summary"]={"type":"text"}; props[f"{c}_keywords"]={"type":"keyword"}
+            props[f"{c}_vector"]={"type":"knn_vector","dimension":emb[c].dim,
+                                  "method":{"name":"hnsw","engine":"lucene","space_type":"cosinesimil"}}
+    mapping={"settings":{"index.knn":True},"mappings":{"properties":props}}
+
+    # per-fuzzy-column vector matrix for fast in-memory semantic search
+    vectors={c: np.array([d[f"{c}_vector"] for d in docs]) for c in fuzzy}
+    return dict(n_rows=n, n_cols=len(df.columns), catalog=catalog, fuzzy=fuzzy, docs=docs,
+                embedders=emb, vectors=vectors, mapping=mapping, merge_groups=merge_groups,
+                coerced=int(coerced), quarantine=int(quarantine), llm_calls=LLM_CALLS["n"])
 
 def run(path):
     df=pd.read_csv(path)
