@@ -267,7 +267,7 @@
       </div>
       <p class="hint" style="margin:10px 0 0">Search free text (semantic/keyword), narrow by an extracted <b>tag</b>,
          and/or add <b>field filters</b> (e.g. <code>first_name = Aisha</code>, <code>country = Japan</code>,
-         <code>interests = solar</code>). Leave everything empty and hit Search to browse all records.</p>
+         <code>interests = solar</code>) — picking a value applies it instantly. Leave everything empty and hit Search to browse all records.</p>
       <div id="results"></div>
     </div>
   </div>
@@ -393,6 +393,7 @@ function render(d){
   registry(d.registry);
   consolidation(d.unified);
   osStructure(d.mapping, d.unified, d.opensearch);
+  if(d.embedder){ $('#osMeta').innerHTML += ` · <span class="mut">embeddings:</span> <b>${d.embedder}</b> (${d.vec_dim}-d)`; }
   colsTable(d.columns);
   tags(d.tags);
   searchSetup(d);
@@ -601,21 +602,27 @@ function facetFor(field){ return (DATA.facets||[]).find(f=>f.field===field); }
 function onFieldPick(){
   const f=facetFor($('#ffield').value); const sel=$('#fvalue'), txt=$('#ftext');
   if(f && f.values){                                   // low-card -> value dropdown
-    sel.innerHTML=''; f.values.forEach(([v,n])=> sel.appendChild(el('option',null,`${v} (${n})`)).value=v);
+    sel.innerHTML=''; sel.appendChild(el('option',null,'— value —')).value='';   // empty placeholder
+    f.values.forEach(([v,n])=> sel.appendChild(el('option',null,`${v} (${n})`)).value=v);
     sel.classList.remove('hidden'); txt.classList.add('hidden');
   } else {                                              // high-card -> free text
     sel.classList.add('hidden'); txt.classList.remove('hidden'); txt.value='';
   }
 }
-$('#ffield').addEventListener('change', onFieldPick);
-$('#addFilter').addEventListener('click', ()=>{
-  const field=$('#ffield').value; if(!field) return;
-  const f=facetFor(field);
-  const value = (f && f.values) ? $('#fvalue').value : $('#ftext').value.trim();
-  if(value==='') return;
+function currentFilterValue(){
+  const f=facetFor($('#ffield').value);
+  return (f && f.values) ? $('#fvalue').value : $('#ftext').value.trim();
+}
+function addCurrentFilter(){                            // fold the picked field+value into FILTERS
+  const field=$('#ffield').value, value=currentFilterValue();
+  if(!field || value==='') return false;
   if(!FILTERS.some(x=>x.field===field && x.value===value)) FILTERS.push({field,value});
-  renderFilters(); doSearch();
-});
+  const s=$('#fvalue'), t=$('#ftext'); if(s) s.value=''; if(t) t.value='';   // reset so re-search won't re-add
+  return true;
+}
+$('#ffield').addEventListener('change', onFieldPick);
+$('#fvalue').addEventListener('change', ()=>{ if(addCurrentFilter()){ renderFilters(); doSearch(); } });  // pick a value -> apply now
+$('#addFilter').addEventListener('click', ()=>{ if(addCurrentFilter()){ renderFilters(); doSearch(); } });
 $('#ftext').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#addFilter').click(); } });
 function renderFilters(){
   const box=$('#activeFilters'); box.innerHTML='';
@@ -642,6 +649,7 @@ $('#go').addEventListener('click', doSearch);
 $('#q').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
 
 async function doSearch(){
+  if(addCurrentFilter()) renderFilters();     // fold any picked-but-not-added filter so Search "just works"
   const q=$('#q').value.trim(); const tag=$('#tag').value;
   const body={q, tag, filters:FILTERS, mode:$('#mode').value, field:$('#field').value, size:12};
   const d=await jpost('/api/search', body);

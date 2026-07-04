@@ -5,7 +5,7 @@ minimal-LLM classification (only ambiguous columns) -> fuzzy-text enrichment -> 
 LLM is used SPARINGLY: the deterministic classifier resolves everything above a confidence
 MARGIN; only low-margin columns escalate. We count escalations so the LLM cost is visible.
 """
-import sys, json, re
+import sys, os, json, re
 import numpy as np, pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
@@ -127,6 +127,8 @@ def summarise(t, k=1):
 _kw=yake.KeywordExtractor(n=2, top=6, dedupLim=0.8)
 def keywords(t): return [k for k,_ in _kw.extract_keywords(t)]
 class LSA:
+    """Offline embedder: TF-IDF -> TruncatedSVD -> L2-normalized (so dot == cosine). No network/PII."""
+    name="LSA (TF-IDF+SVD)"
     def __init__(s,d=64): s.v=TfidfVectorizer(stop_words="english",max_features=6000); s.s=TruncatedSVD(d,random_state=1); s.dim=d
     def fit(s,c):
         X=s.v.fit_transform(c); s.dim=min(s.dim,X.shape[1]-1); s.s.n_components=s.dim
@@ -134,6 +136,35 @@ class LSA:
     def tf(s,t): return s._n(s.s.transform(s.v.transform(t)))
     @staticmethod
     def _n(M): n=np.linalg.norm(M,axis=1,keepdims=True); n[n==0]=1; return M/n
+
+# ---- real neural embeddings (sentence-transformers), with graceful offline fallback to LSA ----
+_ST_MODEL=None; _ST_TRIED=False
+ST_MODEL_NAME="all-MiniLM-L6-v2"
+def _st_model():
+    """Load the shared sentence-transformers model once; None if unavailable/offline/opted-out."""
+    global _ST_MODEL,_ST_TRIED
+    if _ST_TRIED: return _ST_MODEL
+    _ST_TRIED=True
+    if os.environ.get("UNFUCK_NO_ST"): return None            # explicit offline override
+    try:
+        from sentence_transformers import SentenceTransformer
+        _ST_MODEL=SentenceTransformer(ST_MODEL_NAME)          # downloads ~80MB on first run
+    except Exception:
+        _ST_MODEL=None                                        # not installed / no network -> LSA
+    return _ST_MODEL
+
+class STEmbedder:
+    """all-MiniLM-L6-v2 (384-d) behind the same fit/tf/dim interface as LSA. Pretrained -> fit is a no-op.
+    Embeddings are L2-normalized so dot product == cosine, matching the LSA convention."""
+    name="sentence-transformers/"+ST_MODEL_NAME
+    def __init__(s,model): s.model=model; s.dim=model.get_sentence_embedding_dimension()
+    def fit(s,c): return s
+    def tf(s,t): return np.asarray(s.model.encode(list(t), normalize_embeddings=True, show_progress_bar=False))
+
+def make_embedder(vec_dim=64):
+    """Prefer real neural embeddings; fall back to the offline LSA when the model isn't available."""
+    m=_st_model()
+    return STEmbedder(m) if m is not None else LSA(vec_dim)
 
 # ---- field consolidation: coalesce-to-scalar vs gather-to-array (decided by fill co-occupancy) ----
 def _clean_cell(raw, kind):
@@ -267,7 +298,7 @@ def process_dataframe(df, vec_dim=64, sample=1500):
     emb = {}
     for canon in fuzzy_canon:
         corpus = [t if t else "" for t in ftext[canon]]
-        e = emb[canon] = LSA(vec_dim).fit(corpus)
+        e = emb[canon] = make_embedder(vec_dim).fit(corpus)
         M = e.tf(corpus)
         for idx, doc in enumerate(docs):
             t = ftext[canon][idx]
@@ -295,9 +326,11 @@ def process_dataframe(df, vec_dim=64, sample=1500):
                     labels=[sh["labels"].get(c) for c in sh["sources"]])
                for canon, sh in shape.items()]
     vectors = {canon: np.array([d[f"{canon}_vector"] for d in docs]) for canon in fuzzy_canon}
+    _e0 = next(iter(emb.values()), None)
     return dict(n_rows=n, n_cols=len(df.columns), catalog=catalog, fuzzy=fuzzy_canon, docs=docs,
                 embedders=emb, vectors=vectors, mapping=mapping, merge_groups=merge_groups,
-                unified=unified, coerced=int(coerced), quarantine=int(quarantine), llm_calls=LLM_CALLS["n"])
+                unified=unified, coerced=int(coerced), quarantine=int(quarantine), llm_calls=LLM_CALLS["n"],
+                embedder=(_e0.name if _e0 else None), vec_dim=(_e0.dim if _e0 else None))
 
 def run(path):
     df=pd.read_csv(path)

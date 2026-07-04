@@ -1,0 +1,6 @@
+# Optional: real neural embeddings (all-MiniLM-L6-v2, 384-d) for semantic search.
+# The pipeline auto-detects this and uses it when present; without it, it falls back
+# to the offline LSA (TF-IDF + SVD) embedder — no code change needed.
+#   pip install -r requirements-embeddings.txt
+# Downloads a ~80MB model on first use (needs network once). Set UNFUCK_NO_ST=1 to force LSA.
+sentence-transformers

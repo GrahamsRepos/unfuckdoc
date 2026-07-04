@@ -195,6 +195,7 @@ def _overview():
                 merge_groups=merge, fuzzy=res["fuzzy"], tags=tags,
                 all_tags=[t for t, _ in all_tags.most_common(40)],
                 unified=unified, facets=_facets(res), mapping=res["mapping"],
+                embedder=res.get("embedder"), vec_dim=res.get("vec_dim"),
                 sample_docs=samples, display_columns=_display_columns(res),
                 registry=_registry_view(),
                 opensearch=STATE.get("opensearch", {"status": "unknown"}))
@@ -299,15 +300,18 @@ def search():
             return jsonify(error="no free-text column to search semantically"), 400
         qv = res["embedders"][field].tf([q])[0]
         sims = res["vectors"][field] @ qv
-        EPS = 1e-6                                       # ignore zero/negative similarity
-        for i in np.argsort(-sims):                     # apply filters before truncating to size
-            i = int(i)
-            if sims[i] <= EPS:
-                break                                   # sorted desc: once ~0, the rest are too
-            if keep(i):
-                hits.append(dict(score=round(float(sims[i]), 3), doc_id=i))
-            if len(hits) >= size:
-                break
+        # if even the BEST match is weak, the query has no real semantic hit here -> return nothing
+        # (guards against irrelevant queries returning arbitrary low-similarity rows).
+        MIN_TOP = 0.15
+        if sims.size and float(sims.max()) >= MIN_TOP:
+            for i in np.argsort(-sims):                 # apply filters before truncating to size
+                i = int(i)
+                if sims[i] <= 1e-6:
+                    break                               # sorted desc: once ~0, the rest are too
+                if keep(i):
+                    hits.append(dict(score=round(float(sims[i]), 3), doc_id=i))
+                if len(hits) >= size:
+                    break
     else:  # keyword
         terms = [t for t in re.split(r"\s+", q.lower()) if t]
         blobs = STATE["blobs"]
