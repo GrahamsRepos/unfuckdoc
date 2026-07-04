@@ -39,9 +39,14 @@ export const api = {
 
   collections: () => get<{ collections: CollectionSummary[] }>("/api/collections"),
   collection: (name: string) => get<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}`),
-  createCollection: (name: string) => postJson<CollectionDetail>("/api/collections", { name }),
+  createCollection: (name: string, key: string) => postJson<CollectionDetail>("/api/collections", { name, key }),
   deleteCollection: async (name: string) => {
     await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}`, { method: "DELETE" });
+  },
+  putSegment: (name: string, segName: string, filters: { field: string; value: string }[]) =>
+    postJson<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}/segments`, { name: segName, filters }),
+  deleteSegment: async (name: string, seg: string) => {
+    await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/segments/${encodeURIComponent(seg)}`, { method: "DELETE" });
   },
   addSampleToCollection: (name: string, sample: string) =>
     postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(

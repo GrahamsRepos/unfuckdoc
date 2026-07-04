@@ -117,6 +117,7 @@ export interface SearchResponse {
 
 export interface CollectionSummary {
   name: string; index: string; n_files: number; n_records: number; n_fields: number;
+  key_field: string;
 }
 export interface SchemaField {
   field: string; os_type: string | null; kind: string; cardinality: string;
@@ -124,9 +125,11 @@ export interface SchemaField {
 }
 export interface FileMappingEntry { column: string; canonical: string; method: string; }
 export interface CollectionFile { name: string; rows: number; mapping: FileMappingEntry[]; }
+export interface Segment { name: string; filters: FieldFilter[]; count: number; }
 export interface CollectionDetail {
   name: string; index: string; n_records: number;
-  schema: SchemaField[]; files: CollectionFile[]; opensearch: OsStatus;
+  key_field: string; raw_records: number; merged: number;
+  schema: SchemaField[]; files: CollectionFile[]; segments: Segment[]; opensearch: OsStatus;
 }
 export interface CollectionSearchResponse {
   display: string[]; count: number; results: Record<string, string>[];

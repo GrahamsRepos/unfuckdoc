@@ -16,8 +16,9 @@ export async function action({ request }: Route.ActionArgs) {
   const intent = form.get("intent");
   if (intent === "create") {
     const name = String(form.get("name") ?? "").trim();
+    const key = String(form.get("key") ?? "email").trim() || "email";
     if (name) {
-      await api.createCollection(name);
+      await api.createCollection(name, key);
       return redirect(`/collections/${encodeURIComponent(name)}`);
     }
   } else if (intent === "delete") {
@@ -32,12 +33,19 @@ export default function Collections({ loaderData }: Route.ComponentProps) {
     <section className="card">
       <h2>Collections</h2>
       <p className="hint">
-        A collection is a durable target schema. Add files of any shape — each file's columns are inferred
-        and mapped onto the collection's canonical fields, and every record lands in one shared index.
+        Dump many CSVs — even with different column names or partial fields. Each file's columns are
+        standardised to <b>canonical</b> fields, and records that share the collection's <b>unique key</b>
+        are <b>merged into one entity</b> (all datapoints combined). Then search, filter, and save segments.
       </p>
-      <Form method="post" className="searchbar">
+      <Form method="post" className="searchbar" style={{ gap: 8, flexWrap: "wrap" }}>
         <input type="hidden" name="intent" value="create" />
         <input name="name" type="text" placeholder="new collection name (e.g. customers)" />
+        <label className="mut" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          merge on
+          <select name="key" defaultValue="email" title="the unique key used to merge the same entity across files">
+            {["email", "phone", "identifier", "full_name"].map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+        </label>
         <button className="btn" type="submit">+ create</button>
       </Form>
 
@@ -46,7 +54,8 @@ export default function Collections({ loaderData }: Route.ComponentProps) {
         {collections.map((c) => (
           <div key={c.name} className="mgroup">
             <Link to={`/collections/${encodeURIComponent(c.name)}`} className="to">{c.name}</Link>
-            <span className="mut">{c.n_records} records · {c.n_fields} fields · {c.n_files} files</span>
+            <span className="mut">{c.n_records} entities · {c.n_fields} fields · {c.n_files} files</span>
+            <span className="badge" title="merge key">⌘ {c.key_field}</span>
             <code style={{ marginLeft: "auto" }}>{c.index}</code>
             <Form method="post" onSubmit={(e) => { if (!confirm(`Delete collection "${c.name}"?`)) e.preventDefault(); }}>
               <input type="hidden" name="intent" value="delete" />
