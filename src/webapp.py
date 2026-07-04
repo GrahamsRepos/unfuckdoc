@@ -84,6 +84,35 @@ def _flatten(v):
     if isinstance(v, dict): return str(v.get("value", ""))
     return str(v)
 
+def _field_values(v):
+    """Explode a consolidated value into its individual primitive members (for facets/filters)."""
+    if v is None: return []
+    if isinstance(v, list):
+        out = []
+        for x in v: out.extend(_field_values(x))
+        return out
+    if isinstance(v, dict):
+        return [v["value"]] if v.get("value") is not None else []
+    return [v]
+
+def _facets(res):
+    """Per searchable (non free-text) canonical field: type + distinct count, and the value list
+    when it's low-cardinality enough to offer as a dropdown. This is what makes fields filterable."""
+    facets = []
+    for u in res["unified"]:
+        if u["kind"] == "free_text":
+            continue
+        canon = u["canonical"]
+        counter = collections.Counter()
+        for d in res["docs"]:
+            counter.update(str(x) for x in _field_values(d.get(canon)))
+        facet = dict(field=canon, kind=u["kind"], os_type=u["os_type"],
+                     cardinality=u["cardinality"], distinct=len(counter))
+        if u["os_type"] == "keyword" and 0 < len(counter) <= 40:
+            facet["values"] = counter.most_common(40)     # small enum -> offer a value dropdown
+        facets.append(facet)
+    return facets
+
 def _build_search_index(res):
     """Precompute per-doc lowercased text blobs for the keyword search (over canonical fields)."""
     str_fields = [u["canonical"] for u in res["unified"] if u["os_type"] in ("keyword", "text")]
@@ -150,7 +179,7 @@ def _overview():
                 columns=columns, kind_counts=dict(kind_counts),
                 merge_groups=merge, fuzzy=res["fuzzy"], tags=tags,
                 all_tags=[t for t, _ in all_tags.most_common(40)],
-                unified=unified,
+                unified=unified, facets=_facets(res),
                 sample_docs=samples, display_columns=_display_columns(res),
                 registry=_registry_view(),
                 opensearch=STATE.get("opensearch", {"status": "unknown"}))
@@ -229,21 +258,27 @@ def search():
     mode = body.get("mode", "semantic")
     size = min(int(body.get("size", 10)), 50)
     tag = (body.get("tag") or "").strip()
+    filters = [f for f in (body.get("filters") or []) if f.get("field") and f.get("value") != ""]
     field = body.get("field") or (res["fuzzy"][0] if res["fuzzy"] else None)
-    if not q and not tag:
-        return jsonify(error="enter a query or pick a tag"), 400
+    if not q and not tag and not filters:
+        return jsonify(error="enter a query, pick a tag, or add a field filter"), 400
 
-    # tag facet: does this doc carry the tag in any free-text column's extracted keywords?
-    def has_tag(i):
-        if not tag:
-            return True
+    # a doc passes if it carries the tag AND matches every field filter (case-insensitive contains)
+    def keep(i):
         d = res["docs"][i]
-        return any(tag in d.get(f"{c}_keywords", []) for c in res["fuzzy"])
+        if tag and not any(tag in d.get(f"{c}_keywords", []) for c in res["fuzzy"]):
+            return False
+        for f in filters:
+            vals = [str(x).lower() for x in _field_values(d.get(f["field"]))]
+            needle = str(f["value"]).lower()
+            if not any(needle in v for v in vals):
+                return False
+        return True
 
     hits = []
-    if not q:                                          # tag-only: list docs carrying the tag
+    if not q:                                          # facet/tag-only: list docs that pass filters
         for i in range(len(res["docs"])):
-            if has_tag(i):
+            if keep(i):
                 hits.append(dict(score="●", doc_id=i))
             if len(hits) >= size:
                 break
@@ -252,9 +287,9 @@ def search():
             return jsonify(error="no free-text column to search semantically"), 400
         qv = res["embedders"][field].tf([q])[0]
         sims = res["vectors"][field] @ qv
-        for i in np.argsort(-sims):                     # filter by tag before truncating to size
+        for i in np.argsort(-sims):                     # apply filters before truncating to size
             i = int(i)
-            if has_tag(i):
+            if keep(i):
                 hits.append(dict(score=round(float(sims[i]), 3), doc_id=i))
             if len(hits) >= size:
                 break
@@ -264,13 +299,16 @@ def search():
         scored = []
         for i, b in enumerate(blobs):
             s = sum(b.count(t) for t in terms)
-            if s > 0 and has_tag(i):
+            if s > 0 and keep(i):
                 scored.append((s, i))
         scored.sort(key=lambda x: -x[0])
         for s, i in scored[:size]:
             hits.append(dict(score=int(s), doc_id=i))
 
-    disp = res["display_columns"] = _display_columns(res)
+    disp = _display_columns(res)
+    for f in filters:                                  # always surface filtered fields in the table
+        if f["field"] not in disp:
+            disp = [f["field"]] + disp
     out = []
     for h in hits:
         d = res["docs"][h["doc_id"]]
@@ -278,7 +316,7 @@ def search():
         # include primary keywords so tags are visible in results
         kw = d.get(f"{field}_keywords") if field else None
         out.append(dict(score=h["score"], row=row, keywords=(kw or [])[:5]))
-    return jsonify(mode=mode, field=field, tag=tag, count=len(out),
+    return jsonify(mode=mode, field=field, tag=tag, filters=filters, count=len(out),
                    display_columns=disp, results=out)
 
 

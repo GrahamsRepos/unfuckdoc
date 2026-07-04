@@ -80,6 +80,14 @@
   /* search */
   .searchbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .searchbar input[type=text]{flex:1;min-width:220px}
+  .fieldbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;
+       padding-top:12px;border-top:1px solid var(--line)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--pill);border:1px solid var(--line);
+       border-radius:20px;padding:2px 6px 2px 10px;font-size:12px}
+  .chip b{color:#7ee787;font-family:ui-monospace,Menlo,monospace}
+  .chip .x{cursor:pointer;color:var(--mut);border:0;background:none;font-size:14px;padding:0 4px}
+  .chip .x:hover{color:var(--bad)}
   .score{font-family:ui-monospace,Menlo,monospace;color:var(--acc)}
   .kws{display:flex;gap:5px;flex-wrap:wrap}
   .kw{background:var(--pill);border-radius:20px;padding:1px 8px;font-size:11px;color:#d2a8ff}
@@ -199,7 +207,17 @@
         <input id="q" type="text" placeholder="e.g. churn risk, upsell opportunity, crisp citrus…">
         <button class="btn" id="go">Search</button>
       </div>
-      <p class="hint" style="margin:10px 0 0">Tip: pick a <b>tag</b> to filter, or click any tag bar above. Leave the text box empty to list everything with that tag.</p>
+      <div class="fieldbar">
+        <span class="mut">Filter by field:</span>
+        <select id="ffield" title="pick a field to filter on"></select>
+        <select id="fvalue" class="hidden"></select>
+        <input id="ftext" type="text" class="hidden" placeholder="value…">
+        <button class="btn ghost" id="addFilter">+ add filter</button>
+        <span id="activeFilters" class="chips"></span>
+      </div>
+      <p class="hint" style="margin:10px 0 0">Search free text (semantic/keyword), narrow by an extracted <b>tag</b>,
+         and/or add <b>field filters</b> (e.g. <code>first_name = Aisha</code>, <code>country = Japan</code>,
+         <code>interests = solar</code>). Leave the text box empty to just filter.</p>
       <div id="results"></div>
     </div>
   </div>
@@ -407,8 +425,47 @@ function searchSetup(d){
   tsel.appendChild(el('option',null,'— any tag —')).value='';
   (d.all_tags||[]).forEach(t=> tsel.appendChild(el('option',null,t)).value=t);
   tsel.classList.toggle('hidden', !(d.all_tags||[]).length);
+  // field-filter dropdown (all searchable structured fields)
+  FILTERS=[];
+  const ff=$('#ffield'); ff.innerHTML='';
+  (d.facets||[]).forEach(f=>{
+    const o=el('option',null,`${f.field} (${f.distinct})`); o.value=f.field; ff.appendChild(o);
+  });
+  ff.classList.toggle('hidden', !(d.facets||[]).length);
+  $('#addFilter').classList.toggle('hidden', !(d.facets||[]).length);
+  renderFilters(); onFieldPick();
   $('#results').innerHTML='';
   toggleField();
+}
+// ---- structured field filters ----
+let FILTERS=[];
+function facetFor(field){ return (DATA.facets||[]).find(f=>f.field===field); }
+function onFieldPick(){
+  const f=facetFor($('#ffield').value); const sel=$('#fvalue'), txt=$('#ftext');
+  if(f && f.values){                                   // low-card -> value dropdown
+    sel.innerHTML=''; f.values.forEach(([v,n])=> sel.appendChild(el('option',null,`${v} (${n})`)).value=v);
+    sel.classList.remove('hidden'); txt.classList.add('hidden');
+  } else {                                              // high-card -> free text
+    sel.classList.add('hidden'); txt.classList.remove('hidden'); txt.value='';
+  }
+}
+$('#ffield').addEventListener('change', onFieldPick);
+$('#addFilter').addEventListener('click', ()=>{
+  const field=$('#ffield').value; if(!field) return;
+  const f=facetFor(field);
+  const value = (f && f.values) ? $('#fvalue').value : $('#ftext').value.trim();
+  if(value==='') return;
+  if(!FILTERS.some(x=>x.field===field && x.value===value)) FILTERS.push({field,value});
+  renderFilters(); doSearch();
+});
+$('#ftext').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#addFilter').click(); } });
+function renderFilters(){
+  const box=$('#activeFilters'); box.innerHTML='';
+  FILTERS.forEach((f,idx)=>{
+    const c=el('span','chip'); c.innerHTML=`<b>${f.field}</b> = ${f.value}`;
+    const x=el('button','x','×'); x.addEventListener('click',()=>{ FILTERS.splice(idx,1); renderFilters(); doSearch(); });
+    c.appendChild(x); box.appendChild(c);
+  });
 }
 function filterByTag(t){ $('#tag').value=t; doSearch(); $('#results').scrollIntoView({behavior:'smooth',block:'center'}); }
 // render a consolidated value (scalar / array / labeled-object array) for a table cell
@@ -428,12 +485,15 @@ $('#q').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
 
 async function doSearch(){
   const q=$('#q').value.trim(); const tag=$('#tag').value;
-  if(!q && !tag){ $('#results').innerHTML='<div class="empty">enter a query or pick a tag</div>'; return; }
-  const body={q, tag, mode:$('#mode').value, field:$('#field').value, size:12};
+  if(!q && !tag && !FILTERS.length){ $('#results').innerHTML='<div class="empty">enter a query, pick a tag, or add a field filter</div>'; return; }
+  const body={q, tag, filters:FILTERS, mode:$('#mode').value, field:$('#field').value, size:12};
   const d=await jpost('/api/search', body);
   const box=$('#results');
   if(d.error){ box.innerHTML=`<div class="empty">⚠ ${d.error}</div>`; return; }
-  const banner = tag ? `<p class="hint">filtered by tag <span class="kw">${tag}</span>${q?' + query':''} — ${d.count} match(es)</p>` : '';
+  const parts=[];
+  if(tag) parts.push(`tag <span class="kw">${tag}</span>`);
+  FILTERS.forEach(f=> parts.push(`<span class="kw">${f.field}=${f.value}</span>`));
+  const banner = (parts.length||!q) ? `<p class="hint">${d.count} match(es)${parts.length?' — '+parts.join(' + '):''}${q?' + query':''}</p>` : '';
   if(!d.results.length){ box.innerHTML=banner+`<div class="empty">no matches</div>`; return; }
   const cols=d.display_columns.filter(c=> d.results.some(r=> c in r.row));
   let html=banner+'<div class="scroll"><table><thead><tr><th>score</th>';
