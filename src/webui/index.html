@@ -649,8 +649,8 @@ function addCurrentFilter(){                            // fold the picked field
   return true;
 }
 $('#ffield').addEventListener('change', onFieldPick);
-$('#fvalue').addEventListener('change', ()=>{ if(addCurrentFilter()){ renderFilters(); doSearch(); } });  // pick a value -> apply now
 $('#addFilter').addEventListener('click', ()=>{ if(addCurrentFilter()){ renderFilters(); doSearch(); } });
+$('#fvalue').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#addFilter').click(); });
 $('#ftext').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#addFilter').click(); } });
 function renderFilters(){
   const box=$('#activeFilters'); box.innerHTML='';
