@@ -136,6 +136,21 @@
     <div class="osline" id="osline"></div>
   </div>
 
+  <!-- COLLECTIONS -->
+  <div class="card" id="collCard">
+    <h2>Collections</h2>
+    <p class="hint">A collection is a durable target schema. Add files of <b>any shape</b> — each file's columns are
+       inferred and <b>mapped onto the collection's canonical fields</b>, and every record lands in one shared index.</p>
+    <div class="searchbar">
+      <input id="newColl" type="text" placeholder="new collection name (e.g. customers)">
+      <button class="btn" id="createColl">+ create</button>
+      <span class="mut">or open:</span>
+      <select id="collSel"><option value="">— collection —</option></select>
+      <button class="btn ghost" id="delColl" title="delete collection">delete</button>
+    </div>
+    <div id="collDetail"></div>
+  </div>
+
   <!-- MATCH TWO DATASETS -->
   <div class="card" id="matchCard">
     <h2>Match two datasets</h2>
@@ -307,6 +322,8 @@ function setStatus(t){ $('#status').textContent = t; }
 (async () => {
   const d = await (await fetch('/api/samples')).json();
   const list = d.samples||[];
+  SAMPLES = list;
+  loadColls();
   const sel = $('#samples');
   list.forEach(s => sel.appendChild(el('option', null, s)).value = s);
   // match selectors
@@ -673,6 +690,100 @@ async function doSearch(){
   });
   html+='</tbody></table></div>';
   box.innerHTML=html;
+}
+
+// ---- collections ----
+let SAMPLES=[];
+async function loadColls(sel){
+  const d=await (await fetch('/api/collections')).json();
+  const s=$('#collSel'); const cur=sel||s.value;
+  s.innerHTML=''; s.appendChild(el('option',null,'— collection —')).value='';
+  (d.collections||[]).forEach(c=> s.appendChild(el('option',null,`${c.name}  (${c.n_records} recs · ${c.n_fields} fields)`)).value=c.name);
+  if(cur){ s.value=cur; }
+}
+$('#createColl').addEventListener('click', async ()=>{
+  const name=$('#newColl').value.trim(); if(!name) return;
+  const d=await jpost('/api/collections',{name});
+  if(d.error){ $('#collDetail').innerHTML=`<div class="empty">⚠ ${d.error}</div>`; return; }
+  $('#newColl').value=''; await loadColls(name); renderColl(d);
+});
+$('#newColl').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#createColl').click(); });
+$('#collSel').addEventListener('change', ()=>{ const n=$('#collSel').value; if(n) selectColl(n); else $('#collDetail').innerHTML=''; });
+$('#delColl').addEventListener('click', async ()=>{
+  const n=$('#collSel').value; if(!n) return;
+  await fetch('/api/collections/'+encodeURIComponent(n),{method:'DELETE'});
+  $('#collDetail').innerHTML=''; loadColls('');
+});
+async function selectColl(name){ renderColl(await (await fetch('/api/collections/'+encodeURIComponent(name))).json()); }
+
+async function addToColl(name, src){
+  const st=$('#collAddStatus'); if(st) st.textContent='processing & mapping…';
+  let d;
+  if(src.file){ const fd=new FormData(); fd.append('file',src.file);
+    d=await (await fetch('/api/collections/'+encodeURIComponent(name)+'/add',{method:'POST',body:fd})).json(); }
+  else d=await jpost('/api/collections/'+encodeURIComponent(name)+'/add',{sample:src.sample});
+  if(d.error){ if(st) st.textContent='⚠ '+d.error; return; }
+  renderColl(d.detail); loadColls(name);
+}
+async function collSearch(name){
+  const q=$('#collQ').value.trim(), field=$('#collFField').value, val=$('#collFText').value.trim();
+  const filters = (field && val) ? [{field,value:val}] : [];
+  const d=await jpost('/api/collections/'+encodeURIComponent(name)+'/search',{q,filters,size:30});
+  const box=$('#collResults');
+  if(d.error){ box.innerHTML=`<div class="empty">⚠ ${d.error}</div>`; return; }
+  if(!d.count){ box.innerHTML='<div class="empty">no matches</div>'; return; }
+  let h=`<p class="hint">${d.count} record(s)</p><div class="scroll"><table><thead><tr>`;
+  d.display.forEach(c=> h+=`<th>${c==='_source_file'?'source':c}</th>`); h+='</tr></thead><tbody>';
+  d.results.forEach(r=>{ h+='<tr>'; d.display.forEach(c=>{ const v=r[c]; h+=`<td>${v!=null&&v!==''?v:'<span class="mut">—</span>'}</td>`; }); h+='</tr>'; });
+  h+='</tbody></table></div>'; box.innerHTML=h;
+}
+
+function renderColl(d){
+  const box=$('#collDetail'); const os=d.opensearch||{};
+  let h=`<div class="stats" style="margin:14px 0">
+    <div class="stat"><b>${d.n_records}</b><span>records</span></div>
+    <div class="stat"><b>${d.schema.length}</b><span>canonical fields</span></div>
+    <div class="stat"><b>${d.files.length}</b><span>source files</span></div>
+    <div class="stat ${os.status==='indexed'?'ok':''}"><b>${os.count||0}</b><span>${os.index||'index'}</span></div></div>`;
+  h+=`<div class="fieldbar"><span class="mut">Add a file:</span>
+      <select id="collAddSel"></select>
+      <button class="btn ghost" id="collAddBtn">+ add &amp; map</button>
+      <label class="file" style="padding:8px 12px">⬆ upload CSV<input id="collUpload" type="file" accept=".csv"></label>
+      <span id="collAddStatus" class="mut"></span></div>`;
+  h+=`<h2 style="margin:18px 0 4px;font-size:14px">Unified schema <span class="mut" style="font-weight:400">— inferred from the files</span></h2>
+      <div class="scroll"><table><thead><tr><th>Canonical field</th><th>Type</th><th>Coverage</th><th>Contributed by</th></tr></thead><tbody>`;
+  d.schema.forEach(s=>{
+    h+=`<tr><td><span class="canon">${s.field}</span>${s.conflict?' <span class="no">⚠ type conflict</span>':''}</td>
+        <td><span class="kind k-${s.kind}">${s.os_type}</span></td>
+        <td class="mut">${s.count} / ${d.n_records}</td>
+        <td>${s.sources.map(x=>`<span class="src">${x}</span>`).join(' ')}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  h+=`<h2 style="margin:18px 0 8px;font-size:14px">Source files → column mapping</h2><div class="merge">`;
+  d.files.forEach(f=>{
+    h+=`<div class="mgroup" style="align-items:center"><span class="src">${f.name}</span><span class="mut">${f.rows} rows</span>`;
+    f.mapping.forEach(m=> h+=`<span class="chip"><span class="mut">${m.column}</span> → <b>${m.canonical}</b></span>`);
+    h+=`</div>`;
+  });
+  h+=`</div>`;
+  h+=`<h2 style="margin:18px 0 8px;font-size:14px">Search the collection</h2>
+      <div class="searchbar"><input id="collQ" type="text" placeholder="keyword across all fields…">
+      <select id="collFField"></select><input id="collFText" class="hidden" type="text" placeholder="value…">
+      <button class="btn" id="collSearchBtn">Search</button></div>
+      <div id="collResults"></div>`;
+  box.innerHTML=h; box.dataset.name=d.name;
+  // wire
+  const asel=box.querySelector('#collAddSel');
+  SAMPLES.forEach(s=> asel.appendChild(el('option',null,s)).value=s);
+  const coll = SAMPLES.find(s=>s.startsWith('collections/')); if(coll) asel.value=coll;
+  box.querySelector('#collAddBtn').addEventListener('click', ()=> addToColl(d.name,{sample:asel.value}));
+  box.querySelector('#collUpload').addEventListener('change', e=>{ const f=e.target.files[0]; if(f) addToColl(d.name,{file:f}); });
+  const fsel=box.querySelector('#collFField');
+  fsel.appendChild(el('option',null,'— any field —')).value='';
+  d.schema.forEach(s=> fsel.appendChild(el('option',null,s.field)).value=s.field);
+  fsel.addEventListener('change', ()=> box.querySelector('#collFText').classList.toggle('hidden', !fsel.value));
+  box.querySelector('#collSearchBtn').addEventListener('click', ()=> collSearch(d.name));
+  box.querySelector('#collQ').addEventListener('keydown', e=>{ if(e.key==='Enter') collSearch(d.name); });
 }
 </script>
 </body>

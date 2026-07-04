@@ -454,6 +454,320 @@ def match():
                    display_a=dispA, display_b=dispB, pairs=pairs)
 
 
+# ----------------------------- linking N datasets into unified entities -----------------------------
+class _UF:
+    """Union-find for clustering matching records into entities."""
+    def __init__(s, n): s.p = list(range(n))
+    def find(s, x):
+        while s.p[x] != x: s.p[x] = s.p[s.p[x]]; x = s.p[x]
+        return x
+    def union(s, a, b):
+        ra, rb = s.find(a), s.find(b)
+        if ra != rb: s.p[ra] = rb
+
+def _shared_keys_multi(results):
+    """Canonical fields present in ALL selected datasets that make sensible join keys."""
+    prim = [ {u["canonical"]: u for u in r["unified"] if u["kind"] != "free_text"} for r in results ]
+    common = set.intersection(*[set(p) for p in prim]) if prim else set()
+    keys = []
+    for canon in common:
+        uniq = []
+        for r in results:
+            vals = [_norm_key(d.get(canon), canon) for d in r["docs"] if d.get(canon) is not None]
+            uniq.append(len(set(vals)) / len(vals) if vals else 0)
+        kind = prim[0][canon]["kind"]
+        keys.append(dict(field=canon, kind=kind, uniqueness=round(sum(uniq) / len(uniq), 3)))
+    keys.sort(key=lambda k: (k["kind"] == "numeric", k["kind"] == "date", -k["uniqueness"]))
+    return keys
+
+LINK_ORDER = ["full_name", "first_name", "last_name", "company", "email", "phone", "country", "city", "job_title", "amount"]
+def _link_display(results):
+    present = {u["canonical"] for r in results for u in r["unified"] if u["kind"] != "free_text"}
+    return [c for c in LINK_ORDER if c in present][:5]
+
+def _short(name): return os.path.splitext(os.path.basename(name))[0]
+
+def _index_entities(records, entity_of):
+    """Best-effort: write all linked records into ONE unified 'entities' index (arrays/objects
+    flattened to strings to avoid cross-file mapping conflicts). Returns a status dict."""
+    try:
+        from opensearchpy import OpenSearch, helpers
+        c = OpenSearch(hosts=[{"host": "localhost", "port": 9200}], use_ssl=False, timeout=2, max_retries=0)
+        if not c.ping():
+            return {"status": "unavailable"}
+        if c.indices.exists(index="entities"):
+            c.indices.delete(index="entities")
+        c.indices.create(index="entities")
+        def doc(rec, i):
+            out = {"entity_id": entity_of[i], "_source_file": _short(rec["source"])}
+            for k, v in rec["doc"].items():
+                if k.endswith(("_vector", "_summary", "_keywords")): continue
+                out[k] = _flatten(v) if isinstance(v, (list, dict)) else v
+            return out
+        helpers.bulk(c, ({"_index": "entities", "_id": i, "_source": doc(r, i)} for i, r in enumerate(records)))
+        c.indices.refresh(index="entities")
+        return {"status": "indexed", "index": "entities", "count": int(c.count(index="entities")["count"])}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)[:160]}
+
+@app.route("/api/link_keys", methods=["POST"])
+def link_keys():
+    names = (request.get_json(force=True) or {}).get("datasets", [])
+    if len(names) < 2:
+        return jsonify(keys=[])
+    try:
+        results = [_processed(n) for n in names]
+    except Exception as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(keys=_shared_keys_multi(results))
+
+@app.route("/api/link", methods=["POST"])
+def link():
+    body = request.get_json(force=True) or {}
+    names = body.get("datasets", [])
+    threshold = float(body.get("threshold", 0.85))
+    if len(names) < 2:
+        return jsonify(error="pick at least two datasets"), 400
+    try:
+        results = [_processed(n) for n in names]
+    except Exception as e:
+        return jsonify(error=f"could not load datasets: {e}"), 400
+    key = body.get("key")
+    if not key:
+        cands = _shared_keys_multi(results)
+        if not cands:
+            return jsonify(error="no canonical field shared by all selected datasets"), 400
+        key = cands[0]["field"]
+
+    # flatten all records across files, keyed for matching
+    records = []
+    for name, r in zip(names, results):
+        for d in r["docs"]:
+            records.append(dict(source=name, doc=d, key=_norm_key(d.get(key), key)))
+
+    # cluster by fuzzy key match (blocked by first char), union-find
+    uf = _UF(len(records))
+    blocks = collections.defaultdict(list)
+    for i, rec in enumerate(records):
+        if rec["key"]:
+            blocks[rec["key"][0]].append(i)
+    for idxs in blocks.values():
+        for a in range(len(idxs)):
+            for b in range(a + 1, len(idxs)):
+                if _sim(records[idxs[a]]["key"], records[idxs[b]]["key"]) >= threshold:
+                    uf.union(idxs[a], idxs[b])
+
+    # assign a stable entity_id per connected component
+    comp = collections.defaultdict(list)
+    for i in range(len(records)):
+        comp[uf.find(i)].append(i)
+    ordered = sorted(comp.values(), key=lambda m: min(m))
+    entity_of = {}
+    for k, members in enumerate(ordered):
+        eid = f"E-{k + 1:04d}"
+        for i in members: entity_of[i] = eid
+
+    disp = _link_display(results)
+    ents = []
+    for members in ordered:
+        srcs = [_short(records[i]["source"]) for i in members]
+        ents.append(dict(entity_id=entity_of[members[0]], size=len(members),
+                         sources=sorted(set(srcs)), n_sources=len(set(srcs)),
+                         members=[dict(source=_short(records[i]["source"]),
+                                       row={c: _flatten(records[i]["doc"].get(c)) for c in disp})
+                                  for i in members]))
+    linked = [e for e in ents if e["n_sources"] > 1]
+    ents.sort(key=lambda e: (-e["n_sources"], -e["size"], e["entity_id"]))
+    os_status = _index_entities(records, entity_of)
+    return jsonify(key=key, threshold=threshold, display=disp,
+                   n_records=len(records), n_entities=len(ordered),
+                   n_linked=len(linked), n_singletons=sum(1 for e in ents if e["size"] == 1),
+                   per_source={_short(n): results[i]["n_rows"] for i, n in enumerate(names)},
+                   opensearch=os_status, entities=ents[:40])
+
+
+# ----------------------------- collections -----------------------------
+# A collection is a durable, user-named target schema. Files uploaded INTO a collection have their
+# columns inferred and mapped onto the collection's canonical schema, and all records land in ONE
+# per-collection OpenSearch index (col_<name>). This is the productized form of canonical unification.
+COLLECTIONS = {}                                            # name -> collection dict (in memory)
+COLL_UPLOADS = os.path.join(os.path.dirname(__file__), "..", "data", "collection_uploads")
+COLL_STORE = os.path.join(os.path.dirname(__file__), "..", "data", "collections.json")
+
+def _coll_index(name): return "col_" + re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")[:40]
+
+def _save_collections():
+    """Persist just the metadata needed to rebuild (schema/docs are re-derived from the source files)."""
+    meta = {n: {"name": c["name"], "index": c["index"],
+                "files": [{"name": f["name"], "path": f["path"]} for f in c["files"]]}
+           for n, c in COLLECTIONS.items()}
+    try:
+        with open(COLL_STORE, "w") as fh: json.dump(meta, fh, indent=2)
+    except Exception:
+        pass
+
+def _rebuild_collection(name, index, files):
+    coll = {"name": name, "index": index, "schema": {}, "files": [], "docs": [], "opensearch": {"status": "unknown"}}
+    for f in files:
+        try:
+            df = pd.read_csv(f["path"], nrows=MAX_ROWS)
+        except Exception:
+            continue
+        _merge_file(coll, f["name"], df, f["path"], reindex=False)
+    coll["opensearch"] = _index_collection(coll)
+    return coll
+
+def _load_collections():
+    if not os.path.isfile(COLL_STORE): return
+    try:
+        meta = json.load(open(COLL_STORE))
+    except Exception:
+        return
+    for n, m in meta.items():
+        COLLECTIONS[n] = _rebuild_collection(m["name"], m["index"], m.get("files", []))
+
+def _merge_file(coll, filename, df, path, reindex=True):
+    """Process a file, map its columns onto the collection's canonical schema, append its records."""
+    res = process_dataframe(df)
+    mapping = [dict(column=c, canonical=i["canonical"], kind=i["kind"], method=i.get("canonical_method"),
+                    fill=i.get("fill_rate"))
+               for c, i in res["catalog"].items() if i.get("searchable")]
+    for u in res["unified"]:
+        canon = u["canonical"]
+        s = coll["schema"].setdefault(canon, dict(os_type=u["os_type"], kind=u["kind"],
+                                                   cardinality=u["cardinality"], sources=[], count=0, types=set()))
+        if filename not in s["sources"]: s["sources"].append(filename)
+        s["types"].add(u["os_type"])
+        s["count"] += sum(1 for d in res["docs"] if d.get(canon) is not None)
+    for d in res["docs"]:
+        d["_source_file"] = filename
+        coll["docs"].append(d)
+    coll["files"].append(dict(name=filename, path=path, rows=res["n_rows"], mapping=mapping))
+    if reindex:
+        coll["opensearch"] = _index_collection(coll)
+    return mapping
+
+def _index_collection(coll):
+    """Index all of the collection's records into one OpenSearch index (arrays/objects flattened to
+    strings to avoid cross-file mapping conflicts). Best-effort."""
+    try:
+        from opensearchpy import OpenSearch, helpers
+        c = OpenSearch(hosts=[{"host": "localhost", "port": 9200}], use_ssl=False, timeout=2, max_retries=0)
+        if not c.ping(): return {"status": "unavailable"}
+        idx = coll["index"]
+        if c.indices.exists(index=idx): c.indices.delete(index=idx)
+        c.indices.create(index=idx)
+        def doc(d):
+            out = {}
+            for k, v in d.items():
+                if k.endswith(("_vector", "_summary", "_keywords")): continue
+                out[k] = _flatten(v) if isinstance(v, (list, dict)) else v
+            return out
+        helpers.bulk(c, ({"_index": idx, "_id": i, "_source": doc(d)} for i, d in enumerate(coll["docs"])))
+        c.indices.refresh(index=idx)
+        return {"status": "indexed", "index": idx, "count": int(c.count(index=idx)["count"])}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)[:160]}
+
+def _collection_summary(c):
+    return dict(name=c["name"], index=c["index"], n_files=len(c["files"]),
+                n_records=len(c["docs"]), n_fields=len(c["schema"]))
+
+def _collection_detail(c):
+    schema = []
+    for canon, s in sorted(c["schema"].items(), key=lambda kv: (-len(kv[1]["sources"]), kv[0])):
+        schema.append(dict(field=canon, os_type=s["os_type"], kind=s["kind"], cardinality=s["cardinality"],
+                           sources=[_short(x) for x in s["sources"]], n_sources=len(s["sources"]),
+                           count=s["count"], conflict=len(s["types"]) > 1))
+    files = [dict(name=_short(f["name"]), rows=f["rows"],
+                  mapping=[dict(column=m["column"], canonical=m["canonical"], method=m["method"]) for m in f["mapping"]])
+             for f in c["files"]]
+    return dict(name=c["name"], index=c["index"], n_records=len(c["docs"]),
+                schema=schema, files=files, opensearch=c.get("opensearch", {"status": "unknown"}))
+
+@app.route("/api/collections", methods=["GET"])
+def collections_list():
+    return jsonify(collections=[_collection_summary(c) for c in COLLECTIONS.values()])
+
+@app.route("/api/collections", methods=["POST"])
+def collections_create():
+    name = ((request.get_json(force=True) or {}).get("name") or "").strip()
+    if not name: return jsonify(error="name required"), 400
+    if name in COLLECTIONS: return jsonify(error="collection exists"), 400
+    COLLECTIONS[name] = dict(name=name, index=_coll_index(name), schema={}, files=[], docs=[],
+                             opensearch={"status": "unknown"})
+    _save_collections()
+    return jsonify(_collection_detail(COLLECTIONS[name]))
+
+@app.route("/api/collections/<name>", methods=["GET"])
+def collections_get(name):
+    if name not in COLLECTIONS: return jsonify(error="unknown collection"), 404
+    return jsonify(_collection_detail(COLLECTIONS[name]))
+
+@app.route("/api/collections/<name>", methods=["DELETE"])
+def collections_delete(name):
+    c = COLLECTIONS.pop(name, None)
+    if not c: return jsonify(error="unknown collection"), 404
+    try:
+        from opensearchpy import OpenSearch
+        cl = OpenSearch(hosts=[{"host": "localhost", "port": 9200}], use_ssl=False, timeout=2, max_retries=0)
+        if cl.ping() and cl.indices.exists(index=c["index"]): cl.indices.delete(index=c["index"])
+    except Exception:
+        pass
+    _save_collections()
+    return jsonify(ok=True)
+
+@app.route("/api/collections/<name>/add", methods=["POST"])
+def collections_add(name):
+    if name not in COLLECTIONS: return jsonify(error="unknown collection"), 404
+    coll = COLLECTIONS[name]
+    os.makedirs(os.path.join(COLL_UPLOADS, coll["index"]), exist_ok=True)
+    # source: a bundled sample (json body) OR an uploaded file (multipart)
+    if request.files.get("file"):
+        f = request.files["file"]; fn = f.filename
+        path = os.path.join(COLL_UPLOADS, coll["index"], re.sub(r"[^A-Za-z0-9._-]+", "_", fn))
+        f.save(path)
+    else:
+        sample = (request.get_json(force=True) or {}).get("sample", "")
+        src = os.path.normpath(os.path.join(DATA_DIR, sample))
+        if not src.startswith(os.path.normpath(DATA_DIR)) or not os.path.isfile(src):
+            return jsonify(error="unknown sample"), 400
+        fn = os.path.basename(sample); path = src
+    if any(_short(x["name"]) == _short(fn) for x in coll["files"]):
+        return jsonify(error=f"{_short(fn)} already in collection"), 400
+    try:
+        df = pd.read_csv(path, nrows=MAX_ROWS)
+    except Exception as e:
+        return jsonify(error=f"could not parse CSV: {e}"), 400
+    mapping = _merge_file(coll, fn, df, path)
+    _save_collections()
+    return jsonify(added=_short(fn), mapping=[dict(column=m["column"], canonical=m["canonical"], method=m["method"]) for m in mapping],
+                   detail=_collection_detail(coll))
+
+@app.route("/api/collections/<name>/search", methods=["POST"])
+def collections_search(name):
+    if name not in COLLECTIONS: return jsonify(error="unknown collection"), 404
+    coll = COLLECTIONS[name]
+    body = request.get_json(force=True) or {}
+    q = (body.get("q") or "").strip().lower()
+    filters = [f for f in (body.get("filters") or []) if f.get("field") and f.get("value") != ""]
+    size = min(int(body.get("size", 20)), 100)
+    disp = [s["field"] for s in _collection_detail(coll)["schema"]][:6]
+    if "_source_file" not in disp: disp = ["_source_file"] + disp[:5]
+    out = []
+    for d in coll["docs"]:
+        if filters and not all(_filter_match(_field_values(d.get(f["field"])), f["value"]) for f in filters):
+            continue
+        if q:
+            blob = " ".join(_flatten(v) for k, v in d.items() if not k.endswith(("_vector",))).lower()
+            if q not in blob: continue
+        out.append({c: (_short(d.get(c)) if c == "_source_file" else _flatten(d.get(c))) for c in disp})
+        if len(out) >= size: break
+    return jsonify(display=disp, count=len(out), results=out)
+
+
+_load_collections()
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5001"))
     print(f"unfuckdoc web UI -> http://localhost:{port}")

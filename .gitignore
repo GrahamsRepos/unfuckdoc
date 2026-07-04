@@ -19,3 +19,7 @@ venv/
 
 # ide
 .idea/
+
+# runtime collection state (rebuilt from source files)
+data/collections.json
+data/collection_uploads/

@@ -77,12 +77,12 @@ CANON=[   # (canonical, {alias tokens}, {compatible kinds} or None=any)
  ("rating",     {"rating","score","points","point","stars","star","rank","grade"}, {"numeric"}),
  ("age",        {"age","years"}, {"numeric"}),
  ("email",      {"email","emails","mail","e"}, _STR),
- ("phone",      {"phone","tel","telephone","mobile","cell","fax","msisdn"}, _STR),
+ ("phone",      {"phone","tel","telephone","mobile","cell","fax","msisdn","number"}, _STR),
  ("first_name", {"firstname","fname","givenname","given","forename","first"}, _STR),
  ("last_name",  {"lastname","lname","surname","familyname","family","last"}, _STR),
- ("full_name",  {"name","fullname","contact","person","taster"}, _STR),
  ("company",    {"company","organization","organisation","org","employer","business","vendor",
-                 "supplier","winery","brand","account","firm"}, _STR),
+                 "supplier","winery","brand","account","firm"}, _STR),  # before full_name: "Company Name" -> company
+ ("full_name",  {"name","fullname","person","taster"}, _STR),
  ("job_title",  {"jobtitle","role","position","designation","occupation"}, _STR),
  ("country",    {"country","cntry","ctry","nation","countrycode"}, _STR),
  ("region",     {"region","state","province","county","territory","area"}, _STR),
@@ -103,16 +103,14 @@ def _name_tokens(name):
     parts=re.split(r"[^A-Za-z0-9]+", s.lower())                   # split snake/space/hyphen
     return [p for p in parts if p and not p.isdigit()]            # drop empties & pure numbers (region_1 -> region)
 def canonicalize(name, kind):
-    """Return (canonical, confidence, method). Best alias hit wins; type-gated; else identity."""
+    """Return (canonical, confidence, method). CANON is ordered by priority, so the FIRST
+    type-compatible canonical whose alias appears wins (email beats address in 'email_address');
+    else the column keeps its own normalized name."""
     toks=set(_name_tokens(name))
-    best=None
     for canon,aliases,types in CANON:
         if types is not None and kind not in types: continue     # type ∩ tag: skip incompatible
-        hit=toks & aliases
-        if hit:
-            alen=max(len(a) for a in hit)                        # prefer the more specific (longer) alias
-            if best is None or alen>best[0]: best=(alen, canon)
-    if best: return best[1], 0.9, "alias"
+        if toks & aliases:
+            return canon, 0.9, "alias"
     ident="_".join(_name_tokens(name)) or str(name).lower()      # unmatched -> its own normalized name
     return ident, 0.0, "identity"
 
@@ -157,7 +155,9 @@ class STEmbedder:
     """all-MiniLM-L6-v2 (384-d) behind the same fit/tf/dim interface as LSA. Pretrained -> fit is a no-op.
     Embeddings are L2-normalized so dot product == cosine, matching the LSA convention."""
     name="sentence-transformers/"+ST_MODEL_NAME
-    def __init__(s,model): s.model=model; s.dim=model.get_sentence_embedding_dimension()
+    def __init__(s,model):
+        s.model=model
+        s.dim=(getattr(model,"get_embedding_dimension",None) or model.get_sentence_embedding_dimension)()
     def fit(s,c): return s
     def tf(s,t): return np.asarray(s.model.encode(list(t), normalize_embeddings=True, show_progress_bar=False))
 

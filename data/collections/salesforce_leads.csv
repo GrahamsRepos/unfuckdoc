@@ -1,0 +1,56 @@
+fname,lname,email_address,account,mobile,nation,lead_source
+Marcus,Kovac,marcus.kovac@biz.com,Sunrise Textiles,+1-536-950-5854,United States,event
+Ingrid,Moreno,ingrid.moreno@mail.com,Meridian Health,+1-582-113-1669,Brazil,event
+Fatima,Reddy,fatima.reddy@corp.com,Vertex Analytics,+1-408-276-3589,Japan,partner
+Chloe,Kovac,chloe.kovac@corp.com,Meridian Health,+1-604-530-4487,Nigeria,referral
+Fatima,Sato,fatima.sato@acme.com,Vertex Analytics,,Nigeria,event
+Amara,Dubois,amara.dubois@acme.com,Vertex Analytics,+1-300-364-5110,Nigeria,event
+Yuki,Bauer,yuki.bauer@mail.com,Acme Logistics,+1-336-437-9828,Japan,web
+Lars,Patel,,Vertex Analytics,,Germany,referral
+Wei,Nguyen,,Cobalt Robotics,+1-838-115-9656,Spain,cold-call
+Sofia,Moreno,sofia.moreno@acme.com,Cobalt Robotics,,Spain,referral
+Chloe,Berg,,Evergreen Farms,+1-853-323-9677,Brazil,cold-call
+Yuki,Costa,yuki.costa@biz.com,Evergreen Farms,,Spain,cold-call
+Grace,Khan,grace.khan@mail.com,Northwind Traders,,Brazil,referral
+Amara,Tanaka,amara.tanaka@biz.com,Meridian Health,+1-405-512-1290,Canada,cold-call
+Camila,Khan,camila.khan@biz.com,Cobalt Robotics,+1-285-631-9430,Sweden,partner
+Fatima,Kovac,,Sunrise Textiles,+1-878-187-8492,Sweden,event
+Fatima,Tanaka,fatima.tanaka@mail.com,Vertex Analytics,+1-223-484-7773,Canada,partner
+Sofia,Nguyen,sofia.nguyen@mail.com,Lumen Media,+1-784-462-6063,United States,referral
+Marcus,Reddy,marcus.reddy@mail.com,Northwind Traders,+1-373-215-8383,Germany,web
+Chloe,Tanaka,chloe.tanaka@biz.com,Blue Harbor Foods,+1-923-217-1825,Brazil,event
+Aisha,Silva,aisha.silva@acme.com,Blue Harbor Foods,+1-254-422-7517,Nigeria,partner
+Elena,Kovac,elena.kovac@acme.com,Acme Logistics,+1-656-355-1990,India,partner
+Priya,Haddad,priya.haddad@mail.com,Evergreen Farms,+1-294-470-3267,Spain,event
+Ethan,Kovac,ethan.kovac@acme.com,Cobalt Robotics,+1-238-880-9434,Germany,partner
+Fatima,Okoro,fatima.okoro@acme.com,Acme Logistics,+1-463-526-6409,Germany,partner
+Omar,Brown,omar.brown@mail.com,Cobalt Robotics,+1-490-779-5850,India,referral
+Marcus,Nguyen,marcus.nguyen@acme.com,Cobalt Robotics,,Germany,referral
+Ravi,Tanaka,ravi.tanaka@acme.com,Ironclad Security,,Spain,cold-call
+Priya,Sato,priya.sato@biz.com,Cobalt Robotics,+1-614-781-5105,Brazil,event
+Diego,Bauer,,Northwind Traders,+1-639-919-1575,Brazil,event
+Chloe,Costa,chloe.costa@mail.com,Sunrise Textiles,,Nigeria,referral
+Mateo,Berg,mateo.berg@corp.com,Vertex Analytics,+1-523-717-6160,France,partner
+Ingrid,Costa,ingrid.costa@mail.com,Northwind Traders,+1-560-186-8754,Japan,event
+Wei,Patel,,Evergreen Farms,+1-613-375-5035,Sweden,event
+Mateo,Sato,mateo.sato@corp.com,Cobalt Robotics,,Japan,web
+Ethan,Bauer,ethan.bauer@mail.com,Acme Logistics,+1-215-519-2933,India,referral
+Fatima,Tanaka,fatima.tanaka@biz.com,Acme Logistics,+1-268-117-1008,India,referral
+Lars,Okoro,lars.okoro@mail.com,Blue Harbor Foods,+1-398-259-4723,United States,web
+Elena,Kovac,elena.kovac@corp.com,Acme Logistics,+1-335-844-2444,Japan,referral
+Ethan,Haddad,ethan.haddad@mail.com,Ironclad Security,+1-710-207-9186,Brazil,cold-call
+Elena,Nguyen,elena.nguyen@biz.com,Meridian Health,+1-274-679-4252,Nigeria,web
+Lars,Reddy,,Northwind Traders,+1-346-794-4318,France,web
+Ingrid,Costa,,Cobalt Robotics,+1-394-289-9387,Canada,partner
+Kenji,Diallo,kenji.diallo@acme.com,Acme Logistics,+1-956-342-5204,Spain,referral
+Nadia,Moreno,nadia.moreno@corp.com,Vertex Analytics,+1-797-424-4438,Nigeria,event
+Nadia,Hall,,Vertex Analytics,+1-942-294-3596,Spain,referral
+Chloe,Patel,chloe.patel@acme.com,Blue Harbor Foods,+1-772-769-2214,Brazil,web
+Ingrid,Kovac,ingrid.kovac@acme.com,Meridian Health,+1-868-614-6621,Canada,partner
+Yuki,Kovac,yuki.kovac@acme.com,Acme Logistics,+1-599-189-6076,Brazil,cold-call
+Ethan,Kovac,ethan.kovac@corp.com,Cobalt Robotics,+1-931-111-8736,India,cold-call
+Wei,Nguyen,wei.nguyen@corp.com,Vertex Analytics,+1-752-814-9526,India,cold-call
+Omar,Berg,omar.berg@acme.com,Cobalt Robotics,,United States,web
+Lars,Berg,lars.berg@acme.com,Meridian Health,+1-491-639-7530,Sweden,partner
+Yuki,Bauer,yuki.bauer@acme.com,Ironclad Security,+1-238-551-6604,Canada,web
+Amara,Okoro,amara.okoro@acme.com,Evergreen Farms,,Nigeria,partner
