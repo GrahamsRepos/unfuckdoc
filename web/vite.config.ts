@@ -9,7 +9,7 @@ export default defineConfig({
     // Proxy the Flask JSON API so browser-side calls (and SSR) hit one origin — no CORS.
     proxy: {
       "/api": {
-        target: process.env.API_URL ?? "http://localhost:5001",
+        target: process.env.API_URL ?? "http://localhost:8080",
         changeOrigin: true,
       },
     },

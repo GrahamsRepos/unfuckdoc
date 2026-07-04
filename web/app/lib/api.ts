@@ -5,7 +5,8 @@ import type {
   MatchKey, MatchResult, Overview, SearchResponse,
 } from "./types";
 
-const BASE = process.env.API_URL ?? "http://localhost:5001";
+// Defaults to the Kotlin backend (server-kt); override with API_URL to point elsewhere.
+const BASE = process.env.API_URL ?? "http://localhost:8080";
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
