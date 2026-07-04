@@ -29,6 +29,12 @@ dependencies {
     implementation("org.apache.httpcomponents.client5:httpclient5:5.3.1")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
 
+    // Neural embeddings for semantic field-name matching (DJL + MiniLM)
+    implementation(platform("ai.djl:bom:0.30.0"))
+    implementation("ai.djl:api")
+    implementation("ai.djl.huggingface:tokenizers")
+    runtimeOnly("ai.djl.pytorch:pytorch-engine")
+
     // CSV parsing + logging
     implementation("org.apache.commons:commons-csv:1.12.0")
     implementation("ch.qos.logback:logback-classic:1.5.12")

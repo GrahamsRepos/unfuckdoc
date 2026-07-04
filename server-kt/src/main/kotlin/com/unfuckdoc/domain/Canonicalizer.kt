@@ -53,6 +53,10 @@ class Canonicalizer @Inject constructor() {
             .split(nonAlnum)
             .filter { it.isNotEmpty() && it.toIntOrNull() == null }   // drop empties & pure numbers (region_1 -> region)
 
+    /** Canonical vocabulary exposed for the semantic layer: name, alias words, allowed kinds. */
+    data class Spec(val name: String, val aliases: Set<String>, val types: Set<String>?)
+    val specs: List<Spec> get() = canon.map { Spec(it.name, it.aliases, it.types) }
+
     /** Returns canonical name + method ("alias" | "identity"). */
     fun canonicalize(name: String, kind: String): Pair<String, String> {
         val toks = nameTokens(name).toSet()

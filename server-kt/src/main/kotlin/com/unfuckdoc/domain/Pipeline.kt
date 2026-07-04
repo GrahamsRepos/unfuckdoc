@@ -12,7 +12,7 @@ import jakarta.inject.Singleton
 @Singleton
 class Pipeline @Inject constructor(
     private val classifier: Classifier,
-    private val canonicalizer: Canonicalizer,
+    private val canonicalizer: SemanticCanonicalizer,
 ) {
     private val money = Regex("[,\\s$€£¥₹]")
 

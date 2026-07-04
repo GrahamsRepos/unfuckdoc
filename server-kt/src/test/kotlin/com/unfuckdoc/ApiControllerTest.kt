@@ -1,6 +1,8 @@
 package com.unfuckdoc
 
 import com.unfuckdoc.di.appInjector
+import com.unfuckdoc.domain.Embedder
+import com.unfuckdoc.domain.NoopEmbedder
 import com.unfuckdoc.opensearch.OpenSearchService
 import com.unfuckdoc.routes.ApiController
 import dev.misfitlabs.kotlinguice4.KotlinModule
@@ -25,10 +27,13 @@ import kotlin.test.assertTrue
  */
 class ApiControllerTest {
 
-    /** Real container, but swap OpenSearchService for the given (mock) instance. */
+    /** Real container, but swap OpenSearchService for a mock and skip embeddings (keep tests fast). */
     private fun controllerWith(os: OpenSearchService): ApiController =
         appInjector(object : KotlinModule() {
-            override fun configure() { bind<OpenSearchService>().toInstance(os) }
+            override fun configure() {
+                bind<OpenSearchService>().toInstance(os)
+                bind<Embedder>().toInstance(NoopEmbedder)
+            }
         }).getInstance<ApiController>()
 
     @Test

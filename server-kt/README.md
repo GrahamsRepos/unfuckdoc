@@ -54,12 +54,22 @@ The controller implements the API the `web/` frontend expects (snake_case via
 
 Point the frontend at it: `cd web && API_URL=http://localhost:8080 npm run dev`.
 
-## Not in this slice (the ML 20%)
+## Semantic field-name matching (embeddings)
 
-Enrichment — embeddings, keyword extraction, summarization — is intentionally omitted (so `tags`/
-semantic search are absent and the frontend degrades to keyword mode). On the JVM the production path
-is **DJL** or **fastembed-java** (ONNX Runtime) to run `all-MiniLM-L6-v2` in-process (same 384-d
-vectors, feeding a `knn_vector` field), plus Smile/EJML for the LSA fallback.
+The canonicalizer runs the deterministic alias dictionary first (fast, $0). Column names that fall
+through to `identity` are embedded with **all-MiniLM-L6-v2 via DJL** and matched to the nearest
+**type-compatible** canonical, scored by the **best alias word** (max-over-aliases, not an averaged
+bag), and accepted only if it clears an absolute threshold **and** a margin over the runner-up (so an
+ambiguous name is never force-routed). Assignments are tagged `method="semantic"`. The model loads
+**lazily** — only when an unrecognized field actually appears. `UNFUCK_NO_EMBED=1` disables it.
+
+Verified on `open_vocab.csv` (none of these are dictionary aliases):
+`individual → full_name`, `corporation → company`, `webpage → url`, `handset → phone`,
+`nationality → country`.
+
+Still omitted: **document/text** embeddings for semantic *search* + keyword extraction (so `tags`/
+vector search are absent; the frontend degrades to keyword mode). Same DJL path feeds a `knn_vector`
+field when added.
 
 ## Run
 
