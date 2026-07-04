@@ -34,6 +34,7 @@ import java.io.File
 @Serializable data class AddSampleRequest(val sample: String = "")
 @Serializable data class CollectionSearchRequest(val q: String = "", val filters: List<FieldFilter> = emptyList(), val size: Int = 30)
 @Serializable data class SegmentRequest(val name: String, val filters: List<FieldFilter> = emptyList())
+@Serializable data class MappingOverrideRequest(val column: String, val canonical: String = "")
 @Serializable data class MatchCandidatesRequest(val a: String, val b: String)
 @Serializable data class MatchRequest(val a: String, val b: String, val key: String? = null, val threshold: Double = 0.85)
 
@@ -146,6 +147,12 @@ class ApiController @Inject constructor(
         post("/api/collections/{name}/segments") {
             val req = call.receive<SegmentRequest>()
             call.respond(collections.putSegment(call.parameters["name"]!!, req.name.trim(), req.filters)
+                ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
+        }
+
+        post("/api/collections/{name}/mapping") {
+            val req = call.receive<MappingOverrideRequest>()
+            call.respond(collections.setMapping(call.parameters["name"]!!, req.column, req.canonical)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
         }
 

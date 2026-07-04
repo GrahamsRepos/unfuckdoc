@@ -48,6 +48,8 @@ export const api = {
   deleteSegment: async (name: string, seg: string) => {
     await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/segments/${encodeURIComponent(seg)}`, { method: "DELETE" });
   },
+  setMapping: (name: string, column: string, canonical: string) =>
+    postJson<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}/mapping`, { column, canonical }),
   addSampleToCollection: (name: string, sample: string) =>
     postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(
       `/api/collections/${encodeURIComponent(name)}/add`, { sample }),

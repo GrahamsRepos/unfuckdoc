@@ -45,6 +45,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     await api.deleteSegment(params.name, String(form.get("seg")));
     return redirect(base);
   }
+  if (intent === "set-mapping") {
+    await api.setMapping(params.name, String(form.get("column")), String(form.get("canonical") ?? ""));
+    return redirect(base);
+  }
 
   // default: dump a file into the collection
   const file = form.get("file");
@@ -112,7 +116,7 @@ export default function Collection({ loaderData }: Route.ComponentProps) {
 
       <Segments detail={detail} activeFilters={filters} />
       <CollectionSchema detail={detail} />
-      <FileMapping files={detail.files} />
+      <FileMapping detail={detail} />
       <CollectionSearchPanel detail={detail} search={search} />
     </>
   );

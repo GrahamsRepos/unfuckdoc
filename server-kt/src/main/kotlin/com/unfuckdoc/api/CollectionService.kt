@@ -22,7 +22,10 @@ class CollectionService @Inject constructor(
         var count = 0
         val types = mutableSetOf<String?>()
     }
+    private class RawFile(val name: String, val headers: List<String>, val rows: List<Map<String, String?>>)
     private class Collection(val name: String, val index: String, val keyField: String) {
+        val rawFiles = mutableListOf<RawFile>()                     // retained so a re-map can rebuild
+        val overrides = LinkedHashMap<String, String>()             // raw column name -> forced canonical
         val schema = LinkedHashMap<String, Agg>()
         val files = mutableListOf<CollectionFileDto>()
         val entities = mutableListOf<MutableMap<String, Any?>>()   // deduped buckets
@@ -60,21 +63,43 @@ class CollectionService @Inject constructor(
 
     fun add(name: String, filename: String, headers: List<String>, rows: List<Map<String, String?>>): CollectionAddResponse {
         val c = collections[name] ?: return CollectionAddResponse(error = "unknown collection")
-        if (c.files.any { short(it.name) == short(filename) }) return CollectionAddResponse(error = "${short(filename)} already in collection")
+        if (c.rawFiles.any { short(it.name) == short(filename) }) return CollectionAddResponse(error = "${short(filename)} already in collection")
 
-        val result = pipeline.process(filename, headers, rows)
+        c.rawFiles.add(RawFile(filename, headers, rows))
+        val mapping = ingest(c, filename, headers, rows)
+        c.opensearch = reindex(c)
+        return CollectionAddResponse(added = short(filename), mapping = mapping, detail = detail(c))
+    }
+
+    /** Manually override how a raw column maps to a canonical field, then rebuild the merge. Blank
+     *  canonical clears the override (back to inferred). */
+    fun setMapping(name: String, column: String, canonical: String): CollectionDetail? {
+        val c = collections[name] ?: return null
+        if (canonical.isBlank()) c.overrides.remove(column) else c.overrides[column] = canonical.trim()
+        rebuild(c)
+        c.opensearch = reindex(c)
+        return detail(c)
+    }
+
+    /** Re-run classify -> (override-aware) canonicalize -> merge over every retained file. */
+    private fun rebuild(c: Collection) {
+        c.schema.clear(); c.files.clear(); c.entities.clear(); c.keyIndex.clear()
+        c.rawRecords = 0; c.merged = 0
+        for (rf in c.rawFiles) ingest(c, rf.name, rf.headers, rf.rows)
+    }
+
+    /** Process one file (honouring overrides) and dedup-merge its records into the collection. */
+    private fun ingest(c: Collection, filename: String, headers: List<String>, rows: List<Map<String, String?>>): List<FileMappingEntry> {
+        val result = pipeline.process(filename, headers, rows, c.overrides)
         val cons = consolidator.consolidate(rows, result.columns)
         val mapping = result.columns.filter { it.searchable }
             .map { FileMappingEntry(it.name, it.canonical, it.canonicalMethod) }
 
-        // accumulate schema metadata (types/sources) from this file
         for (u in cons.unified) {
             val agg = c.schema.getOrPut(u.canonical) { Agg(u.osType, u.kind, u.cardinality) }
             if (filename !in agg.sources) agg.sources.add(filename)
             agg.types.add(u.osType)
         }
-
-        // dedup-merge each record into a bucket keyed by the collection's key field
         for (doc in cons.docs) {
             c.rawRecords++
             val kv = Docs.normKey(doc[c.keyField], c.keyField)
@@ -93,12 +118,9 @@ class CollectionService @Inject constructor(
                 if (kv.isNotEmpty()) c.keyIndex[kv] = c.entities.size - 1
             }
         }
-        // recompute per-field coverage over the deduped buckets
         c.schema.forEach { (canon, agg) -> agg.count = c.entities.count { it[canon] != null } }
-
         c.files.add(CollectionFileDto(filename, result.nRows, mapping))
-        c.opensearch = reindex(c)
-        return CollectionAddResponse(added = short(filename), mapping = mapping, detail = detail(c))
+        return mapping
     }
 
     /** Create or replace a named segment (saved filtered view) on the collection. */
