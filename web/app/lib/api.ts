@@ -1,0 +1,58 @@
+// Server-side client for the Flask JSON API. Loaders/actions run on the RR7 server,
+// so these fetch the Flask backend directly (browser never talks to Flask -> no CORS).
+import type {
+  CollectionDetail, CollectionSearchResponse, CollectionSummary,
+  MatchKey, MatchResult, Overview, SearchResponse,
+} from "./types";
+
+const BASE = process.env.API_URL ?? "http://localhost:5001";
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`);
+  if (!res.ok) throw new Response(await res.text(), { status: res.status });
+  return res.json() as Promise<T>;
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  // The API returns useful error bodies with non-2xx; surface them as data, not throws.
+  return res.json() as Promise<T>;
+}
+
+export const api = {
+  overview: () => get<Overview>("/api/overview"),
+  samples: () => get<{ samples: string[] }>("/api/samples"),
+  loadSample: (name: string) => postJson<Overview>("/api/load_sample", { name }),
+
+  // multipart upload — forward the incoming FormData straight through
+  upload: async (form: FormData): Promise<Overview> => {
+    const res = await fetch(`${BASE}/api/upload`, { method: "POST", body: form });
+    return res.json();
+  },
+
+  search: (body: unknown) => postJson<SearchResponse>("/api/search", body),
+
+  collections: () => get<{ collections: CollectionSummary[] }>("/api/collections"),
+  collection: (name: string) => get<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}`),
+  createCollection: (name: string) => postJson<CollectionDetail>("/api/collections", { name }),
+  deleteCollection: async (name: string) => {
+    await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}`, { method: "DELETE" });
+  },
+  addSampleToCollection: (name: string, sample: string) =>
+    postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(
+      `/api/collections/${encodeURIComponent(name)}/add`, { sample }),
+  addFileToCollection: async (name: string, form: FormData) => {
+    const res = await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/add`,
+      { method: "POST", body: form });
+    return res.json() as Promise<{ added?: string; error?: string; detail?: CollectionDetail }>;
+  },
+  searchCollection: (name: string, body: unknown) =>
+    postJson<CollectionSearchResponse>(`/api/collections/${encodeURIComponent(name)}/search`, body),
+
+  matchCandidates: (a: string, b: string) => postJson<{ keys: MatchKey[] }>("/api/match_candidates", { a, b }),
+  match: (body: unknown) => postJson<MatchResult>("/api/match", body),
+};
