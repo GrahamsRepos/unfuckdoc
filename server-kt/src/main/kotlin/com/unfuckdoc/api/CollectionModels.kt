@@ -13,6 +13,7 @@ data class CollectionSummary(
 data class SchemaFieldDto(
     val field: String, val osType: String?, val kind: String, val cardinality: String,
     val sources: List<String>, val nSources: Int, val count: Int, val conflict: Boolean,
+    val values: List<JsonElement>? = null,   // enumerable low-cardinality values: each a [value, count] array
 )
 
 @Serializable

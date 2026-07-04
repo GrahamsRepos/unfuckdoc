@@ -12,9 +12,11 @@ export function CollectionSearchPanel({ detail, search }:
   });
   const q = params.get("q") ?? "";
 
-  // schema fields -> facet shape (no value lists; numeric/date get range inputs)
+  // schema fields -> facet shape; low-cardinality keyword fields carry enumerable values (dropdown),
+  // numeric/date/high-card fall back to range/text inputs.
   const facets: Facet[] = detail.schema.map((s) => ({
     field: s.field, kind: s.kind, os_type: s.os_type, cardinality: s.cardinality, distinct: s.count,
+    values: s.values,
   }));
 
   function apply(np: URLSearchParams) { setParams(np, { preventScrollReset: true }); }

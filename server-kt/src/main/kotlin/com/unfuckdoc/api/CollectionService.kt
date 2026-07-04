@@ -152,12 +152,21 @@ class CollectionService @Inject constructor(
         return c.entities.count { d -> filters.all { f -> Docs.filterMatch(Docs.fieldValues(d[f.field]), f.value, dtypes[f.field]) } }
     }
 
+    /** Distinct [value, count] pairs for a low-cardinality keyword field, so the UI can offer a picker. */
+    private fun facetValues(c: Collection, field: String, osType: String?) =
+        if (osType != "keyword") null else {
+            val counts = LinkedHashMap<String, Int>()
+            c.entities.forEach { d -> Docs.fieldValues(d[field]).forEach { v -> counts.merge(v.toString(), 1, Int::plus) } }
+            if (counts.isEmpty() || counts.size > 40) null
+            else counts.entries.sortedByDescending { it.value }.map { Dsl.anyToJson(listOf(it.key, it.value)) }
+        }
+
     private fun detail(c: Collection): CollectionDetail {
         val schema = c.schema.entries
             .sortedWith(compareBy({ -it.value.sources.size }, { it.key }))
             .map { (field, a) ->
                 SchemaFieldDto(field, a.osType, a.kind, a.cardinality, a.sources.map { short(it) },
-                    a.sources.size, a.count, a.types.size > 1)
+                    a.sources.size, a.count, a.types.size > 1, facetValues(c, field, a.osType))
             }
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,

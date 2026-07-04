@@ -122,6 +122,7 @@ export interface CollectionSummary {
 export interface SchemaField {
   field: string; os_type: string | null; kind: string; cardinality: string;
   sources: string[]; n_sources: number; count: number; conflict: boolean;
+  values?: [string, number][];
 }
 export interface FileMappingEntry { column: string; canonical: string; method: string; }
 export interface CollectionFile { name: string; rows: number; mapping: FileMappingEntry[]; }

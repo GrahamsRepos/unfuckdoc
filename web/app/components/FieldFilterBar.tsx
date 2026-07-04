@@ -11,7 +11,8 @@ function rangeHint(f?: Facet): string {
  *  text box that accepts range expressions. Active filters render as removable chips. */
 export function FieldFilterBar({ facets, filters, onAdd, onRemove }:
   { facets: Facet[]; filters: FieldFilter[]; onAdd: (f: FieldFilter) => void; onRemove: (i: number) => void }) {
-  const [field, setField] = useState(facets[0]?.field ?? "");
+  // default to the first field that offers an enumerable value picker, so the dropdown is visible up front
+  const [field, setField] = useState(facets.find((f) => f.values?.length)?.field ?? facets[0]?.field ?? "");
   const [value, setValue] = useState("");
   const facet = facets.find((f) => f.field === field);
 
