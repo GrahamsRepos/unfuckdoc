@@ -15,12 +15,25 @@ JVM backend (Ktor server + Koin DI). Java 21, Gradle wrapper, no external servic
 Verified against the Python `process_dataframe`: `wine.csv` and `crm_contacts.csv` produce the same
 kinds, canonicals, and counts (e.g. `crm_contacts`: 0 LLM, 120 coerced, `Signup Date → date`).
 
+## OpenSearch (real `opensearch-java` client)
+
+- **IndexBuilder** consolidates the classified table into canonical-keyed, cleaned docs (scalar
+  survivorship coalesce) + the `TypeMapping` body.
+- **OpenSearchService** wraps the official `opensearch-java` client (Apache HttpClient5 transport):
+  create index from mapping, bulk index, and search. Raw mapping/query JSON is parsed into typed
+  `TypeMapping` / `Query` objects via each type's `_DESERIALIZER`.
+- **Dsl** builds the query body from params: `term` / `range` (`>`, `<`, `..`) filters + `multi_match`.
+
+Verified against the live cluster on `:9200`: `POST /api/index?sample=…` created `kt_crm_contacts`
+(120 docs), and `/api/search` returns correct hits for term filters (`country=Japan`), range filters
+(`amount>=200000`), and BM25 text match (`q=renewed`). Note: keyword fields are exact-match (analyzed
+BM25 applies only to `text` fields) — real-DB behavior, unlike the Python in-memory substring search.
+
 ## Not in this slice (the ML 20%)
 
 Enrichment — embeddings, keyword extraction, summarization — is intentionally omitted. On the JVM the
 production path is **DJL** or **fastembed-java** (ONNX Runtime) to run `all-MiniLM-L6-v2` in-process
-(same 384-d vectors), plus Smile/EJML for the LSA fallback. The OpenSearch client is first-class on the
-JVM (`opensearch-java`).
+(same 384-d vectors, feeding a `knn_vector` field), plus Smile/EJML for the LSA fallback.
 
 ## Run
 

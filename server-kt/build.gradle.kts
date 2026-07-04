@@ -25,6 +25,11 @@ dependencies {
     implementation("io.insert-koin:koin-ktor:$koin")
     implementation("io.insert-koin:koin-logger-slf4j:$koin")
 
+    // OpenSearch official Java client (+ Apache HttpClient5 transport)
+    implementation("org.opensearch.client:opensearch-java:2.12.0")
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.3.1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+
     // CSV parsing + logging
     implementation("org.apache.commons:commons-csv:1.12.0")
     implementation("ch.qos.logback:logback-classic:1.5.12")
