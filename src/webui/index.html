@@ -111,6 +111,11 @@
   .kws{display:flex;gap:5px;flex-wrap:wrap}
   .kw{background:var(--pill);border-radius:20px;padding:1px 8px;font-size:11px;color:#d2a8ff}
   .empty{color:var(--mut);text-align:center;padding:34px}
+  .dslbox{margin:12px 0;border:1px solid var(--line);border-radius:9px;background:#0b0f14;overflow:hidden}
+  .dslbox summary{cursor:pointer;padding:8px 12px;font-size:12.5px;color:var(--acc);user-select:none}
+  .dslbox summary .mut{color:var(--mut)}
+  .dsl{margin:0;padding:12px 14px;border-top:1px solid var(--line);overflow-x:auto;
+       font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;color:#c9d5e3;white-space:pre}
   .osline{font-size:12.5px;margin-top:8px}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
   code{background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:12px}
@@ -656,6 +661,14 @@ function renderFilters(){
   });
 }
 function filterByTag(t){ $('#tag').value=t; doSearch(); $('#results').scrollIntoView({behavior:'smooth',block:'center'}); }
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function dslBlock(dsl, index){
+  if(!dsl) return '';
+  const target = index ? `POST ${index}/_search` : '_search';
+  return `<details class="dslbox" open><summary>Equivalent OpenSearch query
+      <span class="mut">— ${target} · (search runs in-memory; shown for reference)</span></summary>
+      <pre class="dsl">${escapeHtml(JSON.stringify(dsl,null,2))}</pre></details>`;
+}
 // render a consolidated value (scalar / array / labeled-object array) for a table cell
 function renderVal(v){
   if(v==null) return '<span class="mut">—</span>';
@@ -678,13 +691,14 @@ async function doSearch(){
   const d=await jpost('/api/search', body);
   const box=$('#results');
   if(d.error){ box.innerHTML=`<div class="empty">⚠ ${d.error}</div>`; return; }
+  const dsl = dslBlock(d.dsl, d.index);
   const parts=[];
   if(tag) parts.push(`tag <span class="kw">${tag}</span>`);
   FILTERS.forEach(f=> parts.push(`<span class="kw">${f.field}=${f.value}</span>`));
   const banner = (parts.length||!q) ? `<p class="hint">${d.count} match(es)${parts.length?' — '+parts.join(' + '):''}${q?' + query':''}</p>` : '';
-  if(!d.results.length){ box.innerHTML=banner+`<div class="empty">no matches</div>`; return; }
+  if(!d.results.length){ box.innerHTML=dsl+banner+`<div class="empty">no matches</div>`; return; }
   const cols=d.display_columns.filter(c=> d.results.some(r=> c in r.row));
-  let html=banner+'<div class="scroll"><table><thead><tr><th>score</th>';
+  let html=dsl+banner+'<div class="scroll"><table><thead><tr><th>score</th>';
   cols.forEach(c=> html+=`<th>${c.replace(/_summary$/,' ✎')}</th>`);
   html+='<th>tags</th></tr></thead><tbody>';
   d.results.forEach(r=>{
@@ -737,8 +751,9 @@ async function collSearch(name){
   const d=await jpost('/api/collections/'+encodeURIComponent(name)+'/search',{q,filters,size:30});
   const box=$('#collResults');
   if(d.error){ box.innerHTML=`<div class="empty">⚠ ${d.error}</div>`; return; }
-  if(!d.count){ box.innerHTML='<div class="empty">no matches</div>'; return; }
-  let h=`<p class="hint">${d.count} record(s)</p><div class="scroll"><table><thead><tr>`;
+  const dsl=dslBlock(d.dsl, d.index);
+  if(!d.count){ box.innerHTML=dsl+'<div class="empty">no matches</div>'; return; }
+  let h=dsl+`<p class="hint">${d.count} record(s)</p><div class="scroll"><table><thead><tr>`;
   d.display.forEach(c=> h+=`<th>${c==='_source_file'?'source':c}</th>`); h+='</tr></thead><tbody>';
   d.results.forEach(r=>{ h+='<tr>'; d.display.forEach(c=>{ const v=r[c]; h+=`<td>${v!=null&&v!==''?v:'<span class="mut">—</span>'}</td>`; }); h+='</tr>'; });
   h+='</tbody></table></div>'; box.innerHTML=h;

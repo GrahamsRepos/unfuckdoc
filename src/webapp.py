@@ -144,6 +144,52 @@ def _dtype_of(os_type):
     if os_type == "date": return "date"
     return None
 
+# ---- translate the search boxes into the equivalent OpenSearch Query DSL (for display) ----
+def _cast(tok, dtype):
+    tok = tok.strip()
+    if dtype == "num":
+        try: return float(tok) if "." in tok else int(tok)
+        except ValueError: return tok
+    return tok
+
+def _filter_to_dsl(field, value, dtype):
+    """One field filter -> an OpenSearch clause (term for exact, range for numeric/date expressions)."""
+    if dtype in ("num", "date"):
+        s = str(value).strip()
+        m = re.match(r"^(>=|<=|>|<)\s*(.+)$", s)
+        if m:
+            k = {">": "gt", ">=": "gte", "<": "lt", "<=": "lte"}[m.group(1)]
+            return {"range": {field: {k: _cast(m.group(2), dtype)}}}
+        seps = r"(?:\.\.|to)" if dtype == "date" else r"(?:\.\.|to|-)"
+        m = re.match(rf"^(.+?)\s*{seps}\s*(.+)$", s)
+        if m:
+            return {"range": {field: {"gte": _cast(m.group(1), dtype), "lte": _cast(m.group(2), dtype)}}}
+        m = re.match(r"^=\s*(.+)$", s)
+        if m: value = m.group(1)
+    return {"term": {field: value}}
+
+def _build_dsl(size, filters, dtypes, *, q="", mode="", vector_field=None, vector_dim=None,
+               tag=None, tag_field=None, text_fields=None):
+    """Assemble the bool query the current search boxes correspond to."""
+    must, filt = [], []
+    for f in filters:
+        filt.append(_filter_to_dsl(f["field"], f["value"], dtypes.get(f["field"])))
+    if tag and tag_field:
+        filt.append({"term": {tag_field: tag}})
+    if q:
+        if mode == "semantic" and vector_field:
+            must.append({"knn": {f"{vector_field}_vector": {"vector": f"[…{vector_dim}-dim query embedding…]", "k": size}}})
+        else:
+            must.append({"multi_match": {"query": q, "fields": text_fields or ["*"]}})
+    if not must and not filt:
+        query = {"match_all": {}}
+    else:
+        bool_q = {}
+        if must: bool_q["must"] = must
+        if filt: bool_q["filter"] = filt
+        query = {"bool": bool_q}
+    return {"size": size, "query": query}
+
 def _facets(res):
     """Per searchable (non free-text) canonical field: type + distinct count, and the value list
     when it's low-cardinality enough to offer as a dropdown. This is what makes fields filterable."""
@@ -370,8 +416,13 @@ def search():
         # include primary keywords so tags are visible in results
         kw = d.get(f"{field}_keywords") if field else None
         out.append(dict(score=h["score"], row=row, keywords=(kw or [])[:5]))
+    text_fields = [u["canonical"] for u in res["unified"] if u["os_type"] in ("keyword", "text")]
+    tag_field = f"{res['fuzzy'][0]}_keywords" if res["fuzzy"] else None
+    dsl = _build_dsl(size, filters, dtypes, q=q, mode=mode,
+                     vector_field=(field if mode == "semantic" else None), vector_dim=res.get("vec_dim"),
+                     tag=tag, tag_field=tag_field, text_fields=text_fields)
     return jsonify(mode=mode, field=field, tag=tag, filters=filters, count=len(out),
-                   display_columns=disp, results=out)
+                   display_columns=disp, results=out, dsl=dsl, index=STATE.get("opensearch", {}).get("index"))
 
 
 # ----------------------------- matching two datasets -----------------------------
@@ -822,7 +873,9 @@ def collections_search(name):
             if q not in blob: continue
         out.append(_coll_row(d, disp))
         if len(out) >= size: break
-    return jsonify(display=disp, count=len(out), results=out)
+    text_fields = [c for c, s in coll["schema"].items() if s["os_type"] in ("keyword", "text")]
+    dsl = _build_dsl(size, filters, dtypes, q=body.get("q", ""), mode="keyword", text_fields=text_fields)
+    return jsonify(display=disp, count=len(out), results=out, dsl=dsl, index=coll["index"])
 
 
 _load_collections()
