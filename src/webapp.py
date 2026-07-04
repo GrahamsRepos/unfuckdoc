@@ -96,9 +96,38 @@ def _field_values(v):
         return [v["value"]] if v.get("value") is not None else []
     return [v]
 
-def _filter_match(raw_vals, needle):
-    """Exact (case-insensitive, trimmed) match of a filter value against a field's members.
-    For an array field, matching ANY member counts. Numeric-tolerant so 12000 == 12000.0."""
+import operator as _operator
+_OPS = {">": _operator.gt, ">=": _operator.ge, "<": _operator.lt, "<=": _operator.le, "=": _operator.eq}
+_NUM = r"-?\d+(?:\.\d+)?"
+_DATE = r"\d{4}-\d{2}-\d{2}"
+def _range_pred(expr, dtype):
+    """Parse a comparison/range expression into a predicate, or None if it isn't one.
+    numeric:  >X  >=X  <X  <=X  =X  |  X-Y  X..Y  X to Y
+    date   :  >YYYY-MM-DD ... | YYYY-MM-DD..YYYY-MM-DD | ... to ...   (ISO strings compare chronologically;
+              '-' is NOT a range separator for dates since dates contain hyphens)."""
+    s = str(expr).strip()
+    tok, conv, seps = (_NUM, float, r"(?:\.\.|to|-)") if dtype == "num" else (_DATE, str, r"(?:\.\.|to)")
+    m = re.match(rf"^(>=|<=|>|<|=)\s*({tok})$", s)
+    if m:
+        op = _OPS[m.group(1)]; t = conv(m.group(2)); return lambda x: op(x, t)
+    m = re.match(rf"^({tok})\s*{seps}\s*({tok})$", s)
+    if m:
+        a, b = conv(m.group(1)), conv(m.group(2)); lo, hi = (a, b) if a <= b else (b, a)
+        return lambda x: lo <= x <= hi
+    return None
+
+def _filter_match(raw_vals, needle, dtype=None):
+    """Match a filter value against a field's members (ANY member counts for arrays).
+    dtype 'num'/'date' enables comparison/range expressions; otherwise exact
+    (case-insensitive, trimmed) match with numeric-equality tolerance."""
+    if dtype in ("num", "date"):
+        pred = _range_pred(needle, dtype)
+        if pred is not None:
+            for v in raw_vals:
+                try:
+                    if pred(float(v) if dtype == "num" else str(v).strip()): return True
+                except (TypeError, ValueError): pass
+            return False
     n = str(needle).strip().lower()
     for v in raw_vals:
         if str(v).strip().lower() == n:
@@ -109,6 +138,11 @@ def _filter_match(raw_vals, needle):
         except (TypeError, ValueError):
             pass
     return False
+
+def _dtype_of(os_type):
+    if os_type in ("double", "long", "integer", "float"): return "num"
+    if os_type == "date": return "date"
+    return None
 
 def _facets(res):
     """Per searchable (non free-text) canonical field: type + distinct count, and the value list
@@ -277,14 +311,15 @@ def search():
     filters = [f for f in (body.get("filters") or []) if f.get("field") and f.get("value") != ""]
     field = body.get("field") or (res["fuzzy"][0] if res["fuzzy"] else None)
     # empty query with no tag/filters -> match any (browse all docs)
+    dtypes = {u["canonical"]: _dtype_of(u["os_type"]) for u in res["unified"]}
 
-    # a doc passes if it carries the tag AND matches every field filter (case-insensitive contains)
+    # a doc passes if it carries the tag AND matches every field filter (numeric/date fields allow ranges)
     def keep(i):
         d = res["docs"][i]
         if tag and not any(tag in d.get(f"{c}_keywords", []) for c in res["fuzzy"]):
             return False
         for f in filters:
-            if not _filter_match(_field_values(d.get(f["field"])), f["value"]):
+            if not _filter_match(_field_values(d.get(f["field"])), f["value"], dtype=dtypes.get(f["field"])):
                 return False
         return True
 
@@ -744,7 +779,7 @@ def collections_add(name):
     return jsonify(added=_short(fn), mapping=[dict(column=m["column"], canonical=m["canonical"], method=m["method"]) for m in mapping],
                    detail=_collection_detail(coll))
 
-COLL_DISPLAY = ["company", "email", "phone", "country", "city", "job_title", "amount", "lead_source"]
+COLL_DISPLAY = ["company", "email", "phone", "country", "city", "job_title", "amount", "date", "lead_source"]
 def _row_name(d):
     """One display name regardless of vendor granularity: full_name, else first + last."""
     fn = _flatten(d.get("full_name")).strip()
@@ -776,9 +811,11 @@ def collections_search(name):
     filters = [f for f in (body.get("filters") or []) if f.get("field") and f.get("value") != ""]
     size = min(int(body.get("size", 20)), 100)
     disp = _coll_display(coll)
+    dtypes = {c: _dtype_of(s["os_type"]) for c, s in coll["schema"].items()}
     out = []
     for d in coll["docs"]:
-        if filters and not all(_filter_match(_field_values(d.get(f["field"])), f["value"]) for f in filters):
+        if filters and not all(_filter_match(_field_values(d.get(f["field"])), f["value"], dtype=dtypes.get(f["field"]))
+                               for f in filters):
             continue
         if q:
             blob = " ".join(_flatten(v) for k, v in d.items() if not k.endswith("_vector")).lower()

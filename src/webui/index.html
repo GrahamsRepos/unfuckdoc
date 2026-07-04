@@ -622,9 +622,15 @@ function onFieldPick(){
     sel.innerHTML=''; sel.appendChild(el('option',null,'— value —')).value='';   // empty placeholder
     f.values.forEach(([v,n])=> sel.appendChild(el('option',null,`${v} (${n})`)).value=v);
     sel.classList.remove('hidden'); txt.classList.add('hidden');
-  } else {                                              // high-card -> free text
+  } else {                                              // high-card / numeric / date -> free text
     sel.classList.add('hidden'); txt.classList.remove('hidden'); txt.value='';
+    txt.placeholder = rangeHint(f);
   }
+}
+function rangeHint(f){
+  if(f && f.kind==='numeric') return 'e.g. >100000, <50, 100000-200000';
+  if(f && f.os_type==='date') return 'e.g. >2024-01-01, 2024-01-01..2024-06-30';
+  return 'value…';
 }
 function currentFilterValue(){
   const f=facetFor($('#ffield').value);
@@ -781,7 +787,12 @@ function renderColl(d){
   const fsel=box.querySelector('#collFField');
   fsel.appendChild(el('option',null,'— any field —')).value='';
   d.schema.forEach(s=> fsel.appendChild(el('option',null,s.field)).value=s.field);
-  fsel.addEventListener('change', ()=> box.querySelector('#collFText').classList.toggle('hidden', !fsel.value));
+  const schemaBy={}; d.schema.forEach(s=> schemaBy[s.field]=s);
+  fsel.addEventListener('change', ()=>{
+    const t=box.querySelector('#collFText');
+    t.classList.toggle('hidden', !fsel.value);
+    t.placeholder = rangeHint(schemaBy[fsel.value]);
+  });
   box.querySelector('#collSearchBtn').addEventListener('click', ()=> collSearch(d.name));
   box.querySelector('#collQ').addEventListener('keydown', e=>{ if(e.key==='Enter') collSearch(d.name); });
 }

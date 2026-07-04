@@ -1,46 +1,46 @@
-full_name,work_email,organization,contact_number,location
-Elena Kovac,elena.kovac@corp.com,Acme Logistics,+1-335-844-2444,Mumbai
-Nadia Moreno,nadia.moreno@corp.com,Vertex Analytics,+1-797-424-4438,Toronto
-Amara Tanaka,amara.tanaka@biz.com,Meridian Health,,Osaka
-Yuki Costa,yuki.costa@biz.com,Evergreen Farms,+1-853-555-2248,Valencia
-Grace Kovac,grace.kovac@biz.com,Meridian Health,,Lagos
-Ingrid Hall,ingrid.hall@biz.com,Cobalt Robotics,+1-854-696-7873,Austin
-Sofia Nguyen,sofia.nguyen@mail.com,Lumen Media,+1-784-462-6063,Valencia
-Elena Patel,elena.patel@biz.com,Cobalt Robotics,,Malmo
-Amara Dubois,amara.dubois@acme.com,Vertex Analytics,+1-300-364-5110,Austin
-Lars Reddy,lars.reddy@mail.com,Northwind Traders,+1-346-794-4318,Osaka
-Chloe Okoro,,Acme Logistics,+1-813-295-9262,Malmo
-Omar Brown,omar.brown@mail.com,Cobalt Robotics,,Austin
-Fatima Kovac,fatima.kovac@corp.com,Sunrise Textiles,+1-878-187-8492,Valencia
-Fatima Okoro,fatima.okoro@acme.com,Acme Logistics,,Toronto
-Fatima Tanaka,fatima.tanaka@biz.com,Acme Logistics,+1-268-117-1008,Berlin
-Elena Khan,elena.khan@mail.com,Ironclad Security,+1-849-876-6627,Lyon
-Ingrid Costa,ingrid.costa@mail.com,Northwind Traders,+1-560-186-8754,Sao Paulo
-Priya Haddad,,Evergreen Farms,+1-294-470-3267,Austin
-Tomas Tanaka,tomas.tanaka@acme.com,Northwind Traders,+1-381-798-4086,Valencia
-Lars Patel,lars.patel@biz.com,Vertex Analytics,,Lagos
-Nadia Berg,nadia.berg@corp.com,Acme Logistics,,Lagos
-Ethan Tanaka,ethan.tanaka@acme.com,Blue Harbor Foods,,Lyon
-Marcus Reddy,marcus.reddy@mail.com,Northwind Traders,+1-373-215-8383,Osaka
-Ethan Haddad,ethan.haddad@mail.com,Ironclad Security,+1-710-207-9186,Valencia
-Omar Berg,omar.berg@acme.com,Cobalt Robotics,+1-915-215-9146,Malmo
-Fatima Sato,fatima.sato@acme.com,Vertex Analytics,+1-456-873-4992,Osaka
-Chloe Tanaka,chloe.tanaka@biz.com,Blue Harbor Foods,,Lagos
-Chloe Bauer,chloe.bauer@biz.com,Vertex Analytics,,Mumbai
-Nadia Costa,nadia.costa@corp.com,Meridian Health,,Austin
-Fatima Reddy,fatima.reddy@corp.com,Vertex Analytics,+1-408-276-3589,Toronto
-Elena Diallo,elena.diallo@corp.com,Evergreen Farms,+1-727-609-4493,Sao Paulo
-Elena Nguyen,elena.nguyen@biz.com,Meridian Health,+1-274-679-4252,Osaka
-Grace Khan,grace.khan@mail.com,Northwind Traders,+1-603-974-2643,Osaka
-Ethan Kovac,ethan.kovac@corp.com,Cobalt Robotics,+1-931-111-8736,Berlin
-Yuki Kovac,,Acme Logistics,+1-599-189-6076,Lagos
-Fatima Okoro,fatima.okoro@corp.com,Meridian Health,+1-225-887-5364,Lagos
-Wei Nguyen,wei.nguyen@corp.com,Vertex Analytics,+1-752-814-9526,Toronto
-Nadia Hall,nadia.hall@mail.com,Vertex Analytics,+1-942-294-3596,Valencia
-Ingrid Kovac,ingrid.kovac@acme.com,Meridian Health,,Osaka
-Ingrid Moreno,ingrid.moreno@mail.com,Meridian Health,,Sao Paulo
-Liam Nguyen,liam.nguyen@corp.com,Vertex Analytics,+1-996-575-6345,Toronto
-Elena Kovac,elena.kovac@acme.com,Acme Logistics,+1-656-355-1990,Toronto
-Camila Dubois,camila.dubois@corp.com,Sunrise Textiles,+1-692-216-9240,Lagos
-Wei Nguyen,wei.nguyen@biz.com,Cobalt Robotics,,Mumbai
-Lars Berg,lars.berg@acme.com,Meridian Health,+1-491-639-7530,Osaka
+full_name,work_email,organization,contact_number,location,registration_date
+Marcus Nguyen,marcus.nguyen@acme.com,Cobalt Robotics,,Osaka,"Feb 22, 2024"
+Yuki Bauer,,Ironclad Security,+1-238-551-6604,Toronto,"Feb 17, 2023"
+Priya Sato,priya.sato@biz.com,Cobalt Robotics,+1-614-781-5105,Berlin,"Jan 25, 2023"
+Chloe Kovac,chloe.kovac@corp.com,Meridian Health,+1-604-530-4487,Malmo,"May 26, 2023"
+Ingrid Moreno,ingrid.moreno@mail.com,Meridian Health,+1-582-113-1669,Berlin,"Jul 27, 2023"
+Fatima Okoro,fatima.okoro@acme.com,Acme Logistics,,Valencia,"Jan 19, 2022"
+Chloe Bauer,chloe.bauer@biz.com,Vertex Analytics,+1-317-615-1080,Lyon,"Nov 9, 2024"
+Yuki Costa,yuki.costa@biz.com,Evergreen Farms,+1-853-555-2248,Malmo,"May 9, 2023"
+Sofia Nguyen,,Lumen Media,+1-784-462-6063,Valencia,"May 11, 2022"
+Fatima Tanaka,fatima.tanaka@biz.com,Acme Logistics,,Austin,"Mar 18, 2024"
+Elena Kovac,elena.kovac@acme.com,Acme Logistics,,Lyon,"Mar 5, 2022"
+Ethan Bauer,ethan.bauer@mail.com,Acme Logistics,,Austin,"Jul 17, 2022"
+Ingrid Costa,,Cobalt Robotics,,Toronto,"Jan 6, 2022"
+Ingrid Kovac,ingrid.kovac@acme.com,Meridian Health,+1-868-614-6621,Berlin,"Jun 14, 2024"
+Chloe Tanaka,chloe.tanaka@biz.com,Blue Harbor Foods,+1-923-217-1825,Malmo,"Dec 6, 2023"
+Elena Diallo,elena.diallo@corp.com,Evergreen Farms,,Lagos,"Mar 25, 2023"
+Ingrid Costa,ingrid.costa@mail.com,Northwind Traders,+1-560-186-8754,Osaka,"Nov 22, 2024"
+Ingrid Sato,ingrid.sato@corp.com,Lumen Media,+1-686-466-6108,Sao Paulo,"Oct 12, 2024"
+Nadia Moreno,nadia.moreno@corp.com,Vertex Analytics,+1-797-424-4438,Lagos,"Oct 4, 2024"
+Kenji Diallo,kenji.diallo@acme.com,Acme Logistics,+1-956-342-5204,Malmo,"Nov 15, 2023"
+Lars Okoro,lars.okoro@mail.com,Blue Harbor Foods,+1-398-259-4723,Sao Paulo,"Oct 18, 2023"
+Marcus Kovac,marcus.kovac@biz.com,Sunrise Textiles,+1-536-950-5854,Austin,"Nov 15, 2024"
+Elena Kovac,elena.kovac@corp.com,Acme Logistics,+1-335-844-2444,Valencia,"Jun 5, 2022"
+Camila Khan,camila.khan@biz.com,Cobalt Robotics,+1-285-631-9430,Mumbai,"Oct 11, 2024"
+Fatima Sato,fatima.sato@acme.com,Vertex Analytics,+1-456-873-4992,Toronto,"Jan 28, 2023"
+Wei Nguyen,wei.nguyen@biz.com,Cobalt Robotics,+1-838-115-9656,Malmo,"Apr 6, 2022"
+Amara Tanaka,amara.tanaka@biz.com,Meridian Health,+1-405-512-1290,Osaka,"Feb 17, 2022"
+Aisha Berg,aisha.berg@acme.com,Cobalt Robotics,,Osaka,"Dec 11, 2022"
+Ethan Haddad,ethan.haddad@mail.com,Ironclad Security,+1-710-207-9186,Malmo,"Sep 1, 2022"
+Camila Dubois,camila.dubois@corp.com,Sunrise Textiles,,Mumbai,"Apr 3, 2024"
+Aisha Silva,aisha.silva@acme.com,Blue Harbor Foods,+1-254-422-7517,Malmo,"Feb 26, 2022"
+Fatima Reddy,fatima.reddy@corp.com,Vertex Analytics,,Toronto,"Mar 26, 2022"
+Liam Nguyen,liam.nguyen@corp.com,Vertex Analytics,,Austin,"Apr 27, 2023"
+Sofia Rossi,sofia.rossi@acme.com,Vertex Analytics,+1-215-715-7040,Valencia,"Jan 28, 2023"
+Wei Patel,wei.patel@acme.com,Evergreen Farms,+1-613-375-5035,Malmo,"Feb 21, 2022"
+Ravi Tanaka,ravi.tanaka@acme.com,Ironclad Security,+1-437-379-5896,Sao Paulo,"Nov 14, 2024"
+Diego Bauer,diego.bauer@biz.com,Northwind Traders,+1-639-919-1575,Lyon,"May 22, 2024"
+Ravi Khan,ravi.khan@acme.com,Vertex Analytics,+1-772-397-3692,Osaka,"Mar 23, 2022"
+Nadia Costa,nadia.costa@corp.com,Meridian Health,,Mumbai,"May 12, 2022"
+Kenji Nguyen,kenji.nguyen@mail.com,Vertex Analytics,+1-630-943-9044,Sao Paulo,"Feb 23, 2022"
+Ethan Kovac,ethan.kovac@acme.com,Cobalt Robotics,+1-238-880-9434,Mumbai,"Apr 5, 2023"
+Chloe Patel,,Blue Harbor Foods,,Lyon,"Jul 9, 2024"
+Nadia Hall,nadia.hall@mail.com,Vertex Analytics,+1-942-294-3596,Berlin,"Sep 23, 2023"
+Lars Reddy,lars.reddy@mail.com,Northwind Traders,+1-346-794-4318,Berlin,"Feb 28, 2023"
+Amara Okoro,amara.okoro@acme.com,Evergreen Farms,+1-776-224-9045,Berlin,"Nov 15, 2024"

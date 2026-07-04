@@ -1,51 +1,51 @@
-name,email,business,phone,country,mrr
-Elena Kovac,elena.kovac@corp.com,Acme Logistics,+1-335-844-2444,Japan,"$70,025"
-Wei Patel,wei.patel@acme.com,Evergreen Farms,+1-613-375-5035,Sweden,"$126,036"
-Chloe Tanaka,chloe.tanaka@biz.com,Blue Harbor Foods,+1-923-217-1825,Brazil,"$165,642"
-Yuki Bauer,yuki.bauer@acme.com,Ironclad Security,+1-238-551-6604,Canada,"$146,258"
-Ingrid Kovac,ingrid.kovac@acme.com,Meridian Health,+1-868-614-6621,Canada,"$123,558"
-Ethan Bauer,ethan.bauer@mail.com,Acme Logistics,,India,"$37,283"
-Marcus Reddy,marcus.reddy@mail.com,Northwind Traders,+1-373-215-8383,Germany,"$125,562"
-Nadia Hall,nadia.hall@mail.com,Vertex Analytics,,Spain,"$195,835"
-Elena Khan,elena.khan@mail.com,Ironclad Security,+1-849-876-6627,Germany,"$133,802"
-Omar Brown,omar.brown@mail.com,Cobalt Robotics,+1-490-779-5850,India,"$9,041"
-Yuki Bauer,yuki.bauer@mail.com,Acme Logistics,+1-336-437-9828,Japan,"$184,137"
-Lars Okoro,,Blue Harbor Foods,+1-398-259-4723,United States,"$5,101"
-Fatima Tanaka,fatima.tanaka@biz.com,Acme Logistics,+1-268-117-1008,India,"$57,968"
-Ethan Tanaka,ethan.tanaka@acme.com,Blue Harbor Foods,,Sweden,"$104,467"
-Sofia Rossi,sofia.rossi@acme.com,Vertex Analytics,+1-215-715-7040,Spain,"$99,439"
-Nadia Moreno,nadia.moreno@corp.com,Vertex Analytics,+1-797-424-4438,Nigeria,"$37,697"
-Fatima Sato,fatima.sato@acme.com,Vertex Analytics,+1-456-873-4992,Nigeria,"$13,910"
-Diego Bauer,diego.bauer@biz.com,Northwind Traders,+1-639-919-1575,Brazil,"$47,323"
-Fatima Okoro,fatima.okoro@acme.com,Acme Logistics,+1-463-526-6409,Germany,"$103,826"
-Ravi Tanaka,ravi.tanaka@acme.com,Ironclad Security,+1-437-379-5896,Spain,"$90,556"
-Lars Berg,lars.berg@acme.com,Meridian Health,,Sweden,"$158,718"
-Amara Tanaka,amara.tanaka@biz.com,Meridian Health,,Canada,"$27,180"
-Fatima Kovac,fatima.kovac@corp.com,Sunrise Textiles,+1-878-187-8492,Sweden,"$173,652"
-Chloe Bauer,chloe.bauer@biz.com,Vertex Analytics,+1-317-615-1080,Nigeria,"$160,656"
-Camila Dubois,camila.dubois@corp.com,Sunrise Textiles,+1-692-216-9240,Japan,"$236,015"
-Elena Patel,elena.patel@biz.com,Cobalt Robotics,+1-615-299-3704,France,"$26,851"
-Ingrid Costa,ingrid.costa@mail.com,Northwind Traders,+1-560-186-8754,Japan,"$238,148"
-Fatima Okoro,fatima.okoro@corp.com,Meridian Health,+1-225-887-5364,Sweden,"$64,235"
-Camila Khan,camila.khan@biz.com,Cobalt Robotics,,Sweden,"$9,809"
-Ethan Kovac,ethan.kovac@corp.com,Cobalt Robotics,+1-931-111-8736,India,"$142,207"
-Chloe Kovac,chloe.kovac@corp.com,Meridian Health,,Nigeria,"$2,123"
-Lars Larsen,lars.larsen@corp.com,Lumen Media,,Sweden,"$49,927"
-Diego Larsen,diego.larsen@acme.com,Vertex Analytics,,United States,"$97,237"
-Ethan Haddad,ethan.haddad@mail.com,Ironclad Security,+1-710-207-9186,Brazil,"$193,599"
-Kenji Diallo,kenji.diallo@acme.com,Acme Logistics,+1-956-342-5204,Spain,"$118,299"
-Elena Nguyen,elena.nguyen@biz.com,Meridian Health,+1-274-679-4252,Nigeria,"$206,081"
-Lars Nguyen,lars.nguyen@biz.com,Blue Harbor Foods,,Nigeria,"$144,069"
-Elena Diallo,elena.diallo@corp.com,Evergreen Farms,,Germany,"$185,828"
-Sofia Nguyen,sofia.nguyen@mail.com,Lumen Media,,United States,"$172,206"
-Aisha Silva,aisha.silva@acme.com,Blue Harbor Foods,+1-254-422-7517,Nigeria,"$15,148"
-Ravi Khan,ravi.khan@acme.com,Vertex Analytics,+1-772-397-3692,Sweden,"$139,044"
-Fatima Tanaka,,Vertex Analytics,+1-223-484-7773,Canada,"$218,315"
-Chloe Costa,chloe.costa@mail.com,Sunrise Textiles,,Nigeria,"$144,792"
-Priya Sato,priya.sato@biz.com,Cobalt Robotics,+1-614-781-5105,Brazil,"$54,037"
-Ingrid Costa,ingrid.costa@biz.com,Cobalt Robotics,+1-394-289-9387,Canada,"$126,718"
-Chloe Patel,,Blue Harbor Foods,+1-772-769-2214,Brazil,"$75,457"
-Fatima Reddy,fatima.reddy@corp.com,Vertex Analytics,+1-408-276-3589,Japan,"$76,211"
-Elena Kovac,elena.kovac@acme.com,Acme Logistics,+1-656-355-1990,India,"$14,215"
-Nadia Berg,nadia.berg@corp.com,Acme Logistics,+1-345-192-9825,Sweden,"$214,243"
-Ravi Hall,ravi.hall@mail.com,Meridian Health,,Sweden,"$111,979"
+name,email,business,phone,country,mrr,signup_date
+Ethan Haddad,ethan.haddad@mail.com,Ironclad Security,+1-710-207-9186,Brazil,"$193,599",2024-04-09T03:23:00Z
+Aisha Silva,aisha.silva@acme.com,Blue Harbor Foods,+1-254-422-7517,Nigeria,"$15,148",2023-03-25T07:46:00Z
+Elena Nguyen,elena.nguyen@biz.com,Meridian Health,,Nigeria,"$206,081",2023-07-15T02:54:00Z
+Mateo Sato,mateo.sato@corp.com,Cobalt Robotics,+1-940-630-8211,Japan,"$232,670",2024-11-02T09:25:00Z
+Lars Berg,lars.berg@acme.com,Meridian Health,+1-491-639-7530,Sweden,"$158,718",2022-03-17T19:08:00Z
+Aisha Berg,,Cobalt Robotics,+1-526-239-2186,Germany,"$21,729",2023-08-18T22:08:00Z
+Fatima Reddy,fatima.reddy@corp.com,Vertex Analytics,+1-408-276-3589,Japan,"$76,211",2023-12-15T21:24:00Z
+Lars Okoro,lars.okoro@mail.com,Blue Harbor Foods,,United States,"$5,101",2023-09-23T14:25:00Z
+Omar Berg,omar.berg@acme.com,Cobalt Robotics,+1-915-215-9146,United States,"$206,458",2023-04-04T09:23:00Z
+Wei Patel,wei.patel@acme.com,Evergreen Farms,,Sweden,"$126,036",2022-01-24T20:30:00Z
+Yuki Costa,yuki.costa@biz.com,Evergreen Farms,+1-853-555-2248,Spain,"$146,026",2024-05-22T21:04:00Z
+Fatima Tanaka,fatima.tanaka@biz.com,Acme Logistics,,India,"$57,968",2024-06-22T03:49:00Z
+Lars Nguyen,lars.nguyen@biz.com,Blue Harbor Foods,,Nigeria,"$144,069",2024-05-03T13:07:00Z
+Chloe Berg,chloe.berg@corp.com,Evergreen Farms,,Brazil,"$58,668",2023-06-10T15:45:00Z
+Ravi Khan,ravi.khan@acme.com,Vertex Analytics,,Sweden,"$139,044",2023-04-16T05:22:00Z
+Marcus Reddy,marcus.reddy@mail.com,Northwind Traders,,Germany,"$125,562",2022-12-11T13:51:00Z
+Ingrid Costa,ingrid.costa@mail.com,Northwind Traders,+1-560-186-8754,Japan,"$238,148",2024-09-10T22:58:00Z
+Fatima Sato,,Vertex Analytics,+1-456-873-4992,Nigeria,"$13,910",2023-02-13T08:03:00Z
+Marcus Nguyen,marcus.nguyen@acme.com,Cobalt Robotics,+1-870-755-7040,Germany,"$22,438",2023-08-24T10:56:00Z
+Camila Dubois,camila.dubois@corp.com,Sunrise Textiles,,Japan,"$236,015",2023-06-12T18:19:00Z
+Chloe Kovac,chloe.kovac@corp.com,Meridian Health,+1-604-530-4487,Nigeria,"$2,123",2022-11-16T12:39:00Z
+Nadia Moreno,nadia.moreno@corp.com,Vertex Analytics,+1-797-424-4438,Nigeria,"$37,697",2022-10-23T06:49:00Z
+Sofia Rossi,sofia.rossi@acme.com,Vertex Analytics,,Spain,"$99,439",2024-07-20T13:04:00Z
+Fatima Okoro,fatima.okoro@acme.com,Acme Logistics,+1-463-526-6409,Germany,"$103,826",2023-07-13T01:51:00Z
+Elena Khan,elena.khan@mail.com,Ironclad Security,+1-849-876-6627,Germany,"$133,802",2023-08-12T15:01:00Z
+Lars Patel,lars.patel@biz.com,Vertex Analytics,,Germany,"$120,096",2022-05-22T07:15:00Z
+Priya Sato,priya.sato@biz.com,Cobalt Robotics,+1-614-781-5105,Brazil,"$54,037",2023-01-08T17:31:00Z
+Amara Dubois,amara.dubois@acme.com,Vertex Analytics,+1-300-364-5110,Nigeria,"$74,270",2022-10-27T17:56:00Z
+Elena Kovac,elena.kovac@acme.com,Acme Logistics,+1-656-355-1990,India,"$14,215",2023-05-12T03:56:00Z
+Ethan Kovac,,Cobalt Robotics,+1-238-880-9434,Germany,"$239,266",2022-12-13T21:10:00Z
+Lars Reddy,lars.reddy@mail.com,Northwind Traders,+1-346-794-4318,France,"$137,894",2022-06-20T22:31:00Z
+Yuki Bauer,yuki.bauer@mail.com,Acme Logistics,+1-336-437-9828,Japan,"$184,137",2023-05-12T23:42:00Z
+Yuki Kovac,yuki.kovac@acme.com,Acme Logistics,,Brazil,"$142,759",2022-06-11T22:11:00Z
+Chloe Tanaka,chloe.tanaka@biz.com,Blue Harbor Foods,+1-923-217-1825,Brazil,"$165,642",2022-02-27T03:56:00Z
+Grace Khan,grace.khan@mail.com,Northwind Traders,,Brazil,"$13,038",2023-09-25T21:30:00Z
+Fatima Tanaka,,Vertex Analytics,+1-223-484-7773,Canada,"$218,315",2023-08-02T11:16:00Z
+Elena Kovac,elena.kovac@corp.com,Acme Logistics,+1-335-844-2444,Japan,"$70,025",2024-07-09T22:40:00Z
+Fatima Okoro,fatima.okoro@corp.com,Meridian Health,+1-225-887-5364,Sweden,"$64,235",2023-03-11T06:53:00Z
+Sofia Moreno,sofia.moreno@acme.com,Cobalt Robotics,,Spain,"$101,398",2023-11-23T04:39:00Z
+Camila Khan,camila.khan@biz.com,Cobalt Robotics,+1-285-631-9430,Sweden,"$9,809",2022-03-07T12:39:00Z
+Fatima Kovac,fatima.kovac@corp.com,Sunrise Textiles,,Sweden,"$173,652",2022-01-16T18:44:00Z
+Liam Nguyen,liam.nguyen@corp.com,Vertex Analytics,+1-996-575-6345,Spain,"$117,482",2022-05-23T08:26:00Z
+Kenji Nguyen,kenji.nguyen@mail.com,Vertex Analytics,+1-630-943-9044,Nigeria,"$78,922",2023-11-05T01:10:00Z
+Chloe Okoro,chloe.okoro@mail.com,Acme Logistics,,Nigeria,"$155,253",2022-04-10T11:46:00Z
+Wei Nguyen,wei.nguyen@corp.com,Vertex Analytics,+1-752-814-9526,India,"$133,181",2023-06-01T17:54:00Z
+Nadia Berg,nadia.berg@corp.com,Acme Logistics,+1-345-192-9825,Sweden,"$214,243",2023-08-26T20:18:00Z
+Sofia Nguyen,sofia.nguyen@mail.com,Lumen Media,+1-784-462-6063,United States,"$172,206",2023-03-19T12:43:00Z
+Chloe Costa,chloe.costa@mail.com,Sunrise Textiles,+1-413-411-3312,Nigeria,"$144,792",2022-08-06T03:35:00Z
+Nadia Costa,nadia.costa@corp.com,Meridian Health,+1-280-531-1776,Sweden,"$29,220",2023-07-04T04:20:00Z
+Noah Moreno,noah.moreno@corp.com,Meridian Health,+1-272-916-6598,Brazil,"$81,086",2024-03-09T20:25:00Z

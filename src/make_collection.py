@@ -35,37 +35,47 @@ for i in range(80):
 
 def sample(n): return random.sample(PEOPLE, n)
 def blank(v, p=0.12): return "" if random.random() < p else v
+
+MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+def rand_date(fmt):
+    """Same kind of date, four different string formats — each must be inferred as a date field."""
+    y, m, d = random.randint(2022, 2024), random.randint(1, 12), random.randint(1, 28)
+    if fmt == "iso":   return f"{y}-{m:02d}-{d:02d}"                                  # 2024-03-07
+    if fmt == "us":    return f"{m}/{d}/{y}"                                          # 3/7/2024
+    if fmt == "isodt": return f"{y}-{m:02d}-{d:02d}T{random.randint(0,23):02d}:{random.randint(0,59):02d}:00Z"
+    return f"{MONTHS[m-1]} {d}, {y}"                                                  # Mar 7, 2024
 def write(fname, header, rows):
     with open(os.path.join(BASE, fname), "w", newline="") as fh:
         w = csv.writer(fh); w.writerow(header)
         for r in rows: w.writerow(r)
     print(f"wrote {fname:<26} {len(rows):>3} rows · cols: {header}")
 
-# 1) HubSpot-style: TitleCase, split name, has city
+# 1) HubSpot-style: TitleCase, split name, has city, ISO date
 write("hubspot_contacts.csv",
-      ["First Name","Last Name","Email","Company Name","Phone Number","Country","City"],
-      [[p["first"], p["last"], blank(p["email"]), p["company"], blank(p["phone"]), p["country"], blank(p["city"])]
+      ["First Name","Last Name","Email","Company Name","Phone Number","Country","City","Created Date"],
+      [[p["first"], p["last"], blank(p["email"]), p["company"], blank(p["phone"]), p["country"], blank(p["city"]),
+        rand_date("iso")]
        for p in sample(60)])
 
-# 2) Salesforce-style: snake/abbrev, extra lead_source, no city
+# 2) Salesforce-style: snake/abbrev, extra lead_source, US-format date
 write("salesforce_leads.csv",
-      ["fname","lname","email_address","account","mobile","nation","lead_source"],
+      ["fname","lname","email_address","account","mobile","nation","lead_source","created"],
       [[p["first"], p["last"], blank(p["email"],0.18), p["company"], blank(p["phone"],0.2), p["country"],
-        random.choice(["web","referral","event","cold-call","partner"])]
+        random.choice(["web","referral","event","cold-call","partner"]), rand_date("us")]
        for p in sample(55)])
 
-# 3) Stripe-style: single name field, business, mrr (money), country_code
+# 3) Stripe-style: single name field, business, mrr (money), ISO datetime
 write("stripe_customers.csv",
-      ["name","email","business","phone","country","mrr"],
+      ["name","email","business","phone","country","mrr","signup_date"],
       [[f"{p['first']} {p['last']}", blank(p["email"],0.05), p["company"], blank(p["phone"],0.25),
-        p["country"], f"${p['value']:,}"]
+        p["country"], f"${p['value']:,}", rand_date("isodt")]
        for p in sample(50)])
 
-# 4) Intercom-style: yet another convention, work_email, organization, location, no company/country split
+# 4) Intercom-style: yet another convention, month-name date
 write("intercom_users.csv",
-      ["full_name","work_email","organization","contact_number","location"],
+      ["full_name","work_email","organization","contact_number","location","registration_date"],
       [[f"{p['first']} {p['last']}", blank(p["email"],0.1), p["company"], blank(p["phone"],0.3),
-        random.choice(CITIES)]
+        random.choice(CITIES), rand_date("month")]
        for p in sample(45)])
 
 print(f"\ndone — four vendor exports (same customer entity, different schemas) in data/collections/")

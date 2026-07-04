@@ -1,61 +1,61 @@
-First Name,Last Name,Email,Company Name,Phone Number,Country,City
-Ingrid,Kovac,ingrid.kovac@acme.com,Meridian Health,+1-868-614-6621,Canada,Valencia
-Yuki,Bauer,yuki.bauer@mail.com,Acme Logistics,+1-336-437-9828,Japan,
-Chloe,Costa,chloe.costa@mail.com,Sunrise Textiles,,Nigeria,
-Marcus,Nguyen,marcus.nguyen@acme.com,Cobalt Robotics,+1-870-755-7040,Germany,Toronto
-Fatima,Okoro,fatima.okoro@corp.com,Meridian Health,+1-225-887-5364,Sweden,
-Lars,Berg,lars.berg@acme.com,Meridian Health,+1-491-639-7530,Sweden,
-Sofia,Moreno,sofia.moreno@acme.com,Cobalt Robotics,+1-839-778-7264,Spain,Austin
-Chloe,Tanaka,chloe.tanaka@biz.com,Blue Harbor Foods,+1-923-217-1825,Brazil,Valencia
-Nadia,Moreno,nadia.moreno@corp.com,Vertex Analytics,+1-797-424-4438,Nigeria,
-Omar,Brown,omar.brown@mail.com,Cobalt Robotics,+1-490-779-5850,India,Toronto
-Marcus,Reddy,marcus.reddy@mail.com,Northwind Traders,+1-373-215-8383,Germany,Mumbai
-Ingrid,Hall,ingrid.hall@biz.com,Cobalt Robotics,+1-854-696-7873,Spain,Mumbai
-Fatima,Okoro,fatima.okoro@acme.com,Acme Logistics,+1-463-526-6409,Germany,Berlin
-Grace,Moreno,grace.moreno@acme.com,Sunrise Textiles,+1-725-395-1487,France,Sao Paulo
-Elena,Nguyen,elena.nguyen@biz.com,Meridian Health,+1-274-679-4252,Nigeria,Lagos
-Nadia,Berg,nadia.berg@corp.com,Acme Logistics,+1-345-192-9825,Sweden,Mumbai
-Fatima,Sato,fatima.sato@acme.com,Vertex Analytics,+1-456-873-4992,Nigeria,Malmo
-Nadia,Costa,nadia.costa@corp.com,Meridian Health,+1-280-531-1776,Sweden,Valencia
-Omar,Berg,omar.berg@acme.com,Cobalt Robotics,,United States,Sao Paulo
-Kenji,Diallo,kenji.diallo@acme.com,Acme Logistics,+1-956-342-5204,Spain,Berlin
-Camila,Dubois,camila.dubois@corp.com,Sunrise Textiles,+1-692-216-9240,Japan,
-Wei,Nguyen,wei.nguyen@biz.com,Cobalt Robotics,+1-838-115-9656,Spain,
-Fatima,Tanaka,,Acme Logistics,+1-268-117-1008,India,Lagos
-Lars,Larsen,,Lumen Media,+1-338-987-7325,Sweden,Valencia
-Chloe,Okoro,chloe.okoro@mail.com,Acme Logistics,+1-813-295-9262,Nigeria,Valencia
-Kenji,Nguyen,kenji.nguyen@mail.com,Vertex Analytics,+1-630-943-9044,Nigeria,Mumbai
-Fatima,Kovac,fatima.kovac@corp.com,Sunrise Textiles,+1-878-187-8492,Sweden,Austin
-Wei,Patel,wei.patel@acme.com,Evergreen Farms,+1-613-375-5035,Sweden,Lagos
-Ravi,Tanaka,ravi.tanaka@acme.com,Ironclad Security,+1-437-379-5896,Spain,Austin
-Mateo,Sato,mateo.sato@corp.com,Cobalt Robotics,+1-940-630-8211,Japan,Toronto
-Chloe,Kovac,chloe.kovac@corp.com,Meridian Health,+1-604-530-4487,Nigeria,Berlin
-Aisha,Silva,aisha.silva@acme.com,Blue Harbor Foods,+1-254-422-7517,Nigeria,Lagos
-Nadia,Hall,nadia.hall@mail.com,Vertex Analytics,+1-942-294-3596,Spain,Sao Paulo
-Yuki,Kovac,yuki.kovac@acme.com,Acme Logistics,+1-599-189-6076,Brazil,Sao Paulo
-Ingrid,Costa,ingrid.costa@mail.com,Northwind Traders,+1-560-186-8754,Japan,Lyon
-Lars,Nguyen,lars.nguyen@biz.com,Blue Harbor Foods,+1-373-976-9118,Nigeria,Malmo
-Ravi,Khan,ravi.khan@acme.com,Vertex Analytics,+1-772-397-3692,Sweden,Toronto
-Aisha,Berg,,Cobalt Robotics,+1-526-239-2186,Germany,
-Sofia,Rossi,sofia.rossi@acme.com,Vertex Analytics,+1-215-715-7040,Spain,Sao Paulo
-Ingrid,Sato,,Lumen Media,+1-686-466-6108,United States,Austin
-Chloe,Bauer,chloe.bauer@biz.com,Vertex Analytics,,Nigeria,
-Amara,Dubois,amara.dubois@acme.com,Vertex Analytics,+1-300-364-5110,Nigeria,Austin
-Ethan,Bauer,ethan.bauer@mail.com,Acme Logistics,+1-215-519-2933,India,Lyon
-Chloe,Berg,chloe.berg@corp.com,Evergreen Farms,+1-853-323-9677,Brazil,Toronto
-Noah,Moreno,noah.moreno@corp.com,Meridian Health,+1-272-916-6598,Brazil,Osaka
-Lars,Reddy,lars.reddy@mail.com,Northwind Traders,+1-346-794-4318,France,Mumbai
-Yuki,Bauer,yuki.bauer@acme.com,Ironclad Security,+1-238-551-6604,Canada,Berlin
-Elena,Kovac,elena.kovac@corp.com,Acme Logistics,+1-335-844-2444,Japan,Sao Paulo
-Ingrid,Moreno,ingrid.moreno@mail.com,Meridian Health,,Brazil,Valencia
-Diego,Larsen,diego.larsen@acme.com,Vertex Analytics,+1-740-258-3036,United States,Lyon
-Wei,Nguyen,wei.nguyen@corp.com,Vertex Analytics,+1-752-814-9526,India,Lyon
-Marcus,Kovac,marcus.kovac@biz.com,Sunrise Textiles,+1-536-950-5854,United States,
-Elena,Diallo,elena.diallo@corp.com,Evergreen Farms,+1-727-609-4493,Germany,Lagos
-Ethan,Kovac,ethan.kovac@corp.com,Cobalt Robotics,+1-931-111-8736,India,Osaka
-Grace,Khan,grace.khan@mail.com,Northwind Traders,+1-603-974-2643,Brazil,Osaka
-Camila,Khan,camila.khan@biz.com,Cobalt Robotics,+1-285-631-9430,Sweden,Toronto
-Priya,Haddad,priya.haddad@mail.com,Evergreen Farms,+1-294-470-3267,Spain,Osaka
-Elena,Kovac,elena.kovac@acme.com,Acme Logistics,+1-656-355-1990,India,
-Ravi,Hall,ravi.hall@mail.com,Meridian Health,+1-524-211-4136,Sweden,Toronto
-Tomas,Tanaka,,Northwind Traders,+1-381-798-4086,Sweden,Malmo
+First Name,Last Name,Email,Company Name,Phone Number,Country,City,Created Date
+Ingrid,Kovac,ingrid.kovac@acme.com,Meridian Health,+1-868-614-6621,Canada,Valencia,2023-11-12
+Yuki,Bauer,yuki.bauer@mail.com,Acme Logistics,+1-336-437-9828,Japan,Lagos,2024-02-14
+Chloe,Costa,chloe.costa@mail.com,Sunrise Textiles,+1-413-411-3312,Nigeria,Valencia,2023-01-03
+Marcus,Nguyen,marcus.nguyen@acme.com,Cobalt Robotics,+1-870-755-7040,Germany,Toronto,2024-05-16
+Fatima,Okoro,fatima.okoro@corp.com,Meridian Health,+1-225-887-5364,Sweden,Sao Paulo,2022-04-12
+Lars,Berg,lars.berg@acme.com,Meridian Health,+1-491-639-7530,Sweden,Lagos,2023-12-15
+Sofia,Moreno,sofia.moreno@acme.com,Cobalt Robotics,+1-839-778-7264,Spain,Austin,2023-08-17
+Chloe,Tanaka,chloe.tanaka@biz.com,Blue Harbor Foods,+1-923-217-1825,Brazil,Valencia,2023-12-17
+Nadia,Moreno,nadia.moreno@corp.com,Vertex Analytics,+1-797-424-4438,Nigeria,Sao Paulo,2023-11-13
+Omar,Brown,omar.brown@mail.com,Cobalt Robotics,+1-490-779-5850,India,Toronto,2023-07-18
+Marcus,Reddy,marcus.reddy@mail.com,Northwind Traders,+1-373-215-8383,Germany,Mumbai,2022-08-28
+Ingrid,Hall,ingrid.hall@biz.com,Cobalt Robotics,,Spain,Mumbai,2024-03-19
+Fatima,Okoro,fatima.okoro@acme.com,Acme Logistics,,Germany,Berlin,2023-02-19
+Grace,Moreno,grace.moreno@acme.com,Sunrise Textiles,+1-725-395-1487,France,,2022-05-24
+Elena,Nguyen,,Meridian Health,+1-274-679-4252,Nigeria,,2024-03-04
+Nadia,Berg,nadia.berg@corp.com,Acme Logistics,+1-345-192-9825,Sweden,Mumbai,2022-08-25
+Fatima,Sato,fatima.sato@acme.com,Vertex Analytics,+1-456-873-4992,Nigeria,Malmo,2023-06-26
+Nadia,Costa,nadia.costa@corp.com,Meridian Health,+1-280-531-1776,Sweden,Valencia,2024-12-03
+Omar,Berg,omar.berg@acme.com,Cobalt Robotics,+1-915-215-9146,United States,Sao Paulo,2024-06-28
+Kenji,Diallo,,Acme Logistics,+1-956-342-5204,Spain,,2023-09-21
+Camila,Dubois,,Sunrise Textiles,+1-692-216-9240,Japan,,2022-07-14
+Wei,Nguyen,wei.nguyen@biz.com,Cobalt Robotics,+1-838-115-9656,Spain,Osaka,2024-07-22
+Fatima,Tanaka,fatima.tanaka@biz.com,Acme Logistics,+1-268-117-1008,India,Lagos,2023-05-02
+Lars,Larsen,lars.larsen@corp.com,Lumen Media,+1-338-987-7325,Sweden,Valencia,2022-03-02
+Chloe,Okoro,chloe.okoro@mail.com,Acme Logistics,,Nigeria,Valencia,2022-06-04
+Kenji,Nguyen,kenji.nguyen@mail.com,Vertex Analytics,+1-630-943-9044,Nigeria,Mumbai,2024-12-16
+Fatima,Kovac,fatima.kovac@corp.com,Sunrise Textiles,+1-878-187-8492,Sweden,Austin,2023-07-06
+Wei,Patel,wei.patel@acme.com,Evergreen Farms,+1-613-375-5035,Sweden,Lagos,2024-08-28
+Ravi,Tanaka,ravi.tanaka@acme.com,Ironclad Security,+1-437-379-5896,Spain,Austin,2023-11-18
+Mateo,Sato,mateo.sato@corp.com,Cobalt Robotics,,Japan,Toronto,2023-01-07
+Chloe,Kovac,chloe.kovac@corp.com,Meridian Health,+1-604-530-4487,Nigeria,Berlin,2024-09-25
+Aisha,Silva,aisha.silva@acme.com,Blue Harbor Foods,+1-254-422-7517,Nigeria,Lagos,2022-01-28
+Nadia,Hall,nadia.hall@mail.com,Vertex Analytics,+1-942-294-3596,Spain,Sao Paulo,2024-07-20
+Yuki,Kovac,yuki.kovac@acme.com,Acme Logistics,+1-599-189-6076,Brazil,Sao Paulo,2022-05-28
+Ingrid,Costa,ingrid.costa@mail.com,Northwind Traders,+1-560-186-8754,Japan,Lyon,2024-05-17
+Lars,Nguyen,lars.nguyen@biz.com,Blue Harbor Foods,+1-373-976-9118,Nigeria,Malmo,2022-04-27
+Ravi,Khan,ravi.khan@acme.com,Vertex Analytics,+1-772-397-3692,Sweden,Toronto,2023-05-20
+Aisha,Berg,aisha.berg@acme.com,Cobalt Robotics,,Germany,Mumbai,2023-02-24
+Sofia,Rossi,sofia.rossi@acme.com,Vertex Analytics,+1-215-715-7040,Spain,Sao Paulo,2022-07-07
+Ingrid,Sato,ingrid.sato@corp.com,Lumen Media,,United States,Austin,2022-01-18
+Chloe,Bauer,chloe.bauer@biz.com,Vertex Analytics,+1-317-615-1080,Nigeria,Toronto,2023-06-10
+Amara,Dubois,amara.dubois@acme.com,Vertex Analytics,+1-300-364-5110,Nigeria,Austin,2024-12-03
+Ethan,Bauer,ethan.bauer@mail.com,Acme Logistics,+1-215-519-2933,India,,2023-11-15
+Chloe,Berg,chloe.berg@corp.com,Evergreen Farms,+1-853-323-9677,Brazil,Toronto,2023-01-28
+Noah,Moreno,noah.moreno@corp.com,Meridian Health,+1-272-916-6598,Brazil,Osaka,2024-02-15
+Lars,Reddy,lars.reddy@mail.com,Northwind Traders,+1-346-794-4318,France,Mumbai,2024-04-20
+Yuki,Bauer,yuki.bauer@acme.com,Ironclad Security,+1-238-551-6604,Canada,Berlin,2024-05-11
+Elena,Kovac,elena.kovac@corp.com,Acme Logistics,+1-335-844-2444,Japan,,2022-04-13
+Ingrid,Moreno,ingrid.moreno@mail.com,Meridian Health,+1-582-113-1669,Brazil,Valencia,2024-08-24
+Diego,Larsen,diego.larsen@acme.com,Vertex Analytics,+1-740-258-3036,United States,Lyon,2022-03-20
+Wei,Nguyen,,Vertex Analytics,+1-752-814-9526,India,Lyon,2022-04-13
+Marcus,Kovac,,Sunrise Textiles,+1-536-950-5854,United States,Valencia,2022-04-02
+Elena,Diallo,elena.diallo@corp.com,Evergreen Farms,+1-727-609-4493,Germany,Lagos,2022-06-27
+Ethan,Kovac,ethan.kovac@corp.com,Cobalt Robotics,+1-931-111-8736,India,Osaka,2022-12-13
+Grace,Khan,grace.khan@mail.com,Northwind Traders,+1-603-974-2643,Brazil,Osaka,2024-07-20
+Camila,Khan,camila.khan@biz.com,Cobalt Robotics,+1-285-631-9430,Sweden,Toronto,2024-10-17
+Priya,Haddad,,Evergreen Farms,+1-294-470-3267,Spain,Osaka,2024-08-04
+Elena,Kovac,elena.kovac@acme.com,Acme Logistics,+1-656-355-1990,India,Lagos,2023-02-20
+Ravi,Hall,ravi.hall@mail.com,Meridian Health,+1-524-211-4136,Sweden,Toronto,2023-09-08
+Tomas,Tanaka,tomas.tanaka@acme.com,Northwind Traders,+1-381-798-4086,Sweden,Malmo,2024-04-17
