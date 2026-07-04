@@ -30,9 +30,10 @@ import java.io.File
     val q: String = "", val mode: String = "keyword", val field: String? = null,
     val tag: String = "", val filters: List<FieldFilter> = emptyList(), val size: Int = 12,
 )
-@Serializable data class CreateCollectionRequest(val name: String)
+@Serializable data class CreateCollectionRequest(val name: String, val key: String = "email")
 @Serializable data class AddSampleRequest(val sample: String = "")
 @Serializable data class CollectionSearchRequest(val q: String = "", val filters: List<FieldFilter> = emptyList(), val size: Int = 30)
+@Serializable data class SegmentRequest(val name: String, val filters: List<FieldFilter> = emptyList())
 @Serializable data class MatchCandidatesRequest(val a: String, val b: String)
 @Serializable data class MatchRequest(val a: String, val b: String, val key: String? = null, val threshold: Double = 0.85)
 
@@ -107,8 +108,9 @@ class ApiController @Inject constructor(
         get("/api/collections") { call.respond(mapOf("collections" to collections.list())) }
 
         post("/api/collections") {
-            val name = call.receive<CreateCollectionRequest>().name.trim()
-            call.respond(collections.create(name) ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid or duplicate name")))
+            val req = call.receive<CreateCollectionRequest>()
+            call.respond(collections.create(req.name.trim(), req.key)
+                ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid or duplicate name")))
         }
 
         get("/api/collections/{name}") {
@@ -139,6 +141,17 @@ class ApiController @Inject constructor(
             val req = call.receive<CollectionSearchRequest>()
             call.respond(collections.search(call.parameters["name"]!!, req.q, req.filters, req.size)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
+        }
+
+        post("/api/collections/{name}/segments") {
+            val req = call.receive<SegmentRequest>()
+            call.respond(collections.putSegment(call.parameters["name"]!!, req.name.trim(), req.filters)
+                ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
+        }
+
+        delete("/api/collections/{name}/segments/{seg}") {
+            call.respond(collections.deleteSegment(call.parameters["name"]!!, call.parameters["seg"]!!)
+                ?: return@delete call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
         }
 
         // ---- match ----

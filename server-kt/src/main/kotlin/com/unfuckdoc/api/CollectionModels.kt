@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonElement
 @Serializable
 data class CollectionSummary(
     val name: String, val index: String, val nFiles: Int, val nRecords: Int, val nFields: Int,
+    val keyField: String,
 )
 
 @Serializable
@@ -20,10 +21,16 @@ data class FileMappingEntry(val column: String, val canonical: String, val metho
 @Serializable
 data class CollectionFileDto(val name: String, val rows: Int, val mapping: List<FileMappingEntry>)
 
+/** A named, saved filtered view of the joined collection (e.g. "cold leads", "customers · Cape Town"). */
+@Serializable
+data class Segment(val name: String, val filters: List<FieldFilter>, val count: Int = 0)
+
 @Serializable
 data class CollectionDetail(
     val name: String, val index: String, val nRecords: Int,
-    val schema: List<SchemaFieldDto>, val files: List<CollectionFileDto>, val opensearch: OsStatus,
+    val keyField: String, val rawRecords: Int, val merged: Int,
+    val schema: List<SchemaFieldDto>, val files: List<CollectionFileDto>,
+    val segments: List<Segment>, val opensearch: OsStatus,
 )
 
 @Serializable

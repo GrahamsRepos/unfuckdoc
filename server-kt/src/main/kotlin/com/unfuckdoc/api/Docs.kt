@@ -27,6 +27,17 @@ object Docs {
         "double", "long", "integer", "float" -> "num"; "date" -> "date"; else -> null
     }
 
+    /** Normalize a value for use as a dedup/join key (email lowercased, phone digits-only, else
+     *  lowercased + punctuation-stripped). Empty string means "no key" (not dedupable). */
+    fun normKey(v: Any?, canon: String): String {
+        val s = flattenText(v).trim().lowercase()
+        return when (canon) {
+            "email" -> s.replace(" ", "")
+            "phone" -> s.filter { it.isDigit() }
+            else -> s.replace(Regex("[^a-z0-9 ]"), "").replace(Regex("\\s+"), " ").trim()
+        }
+    }
+
     /** One display name regardless of vendor granularity: full_name, else first + last. */
     fun rowName(doc: Map<String, Any?>): String {
         val full = flattenText(doc["full_name"]).trim()
