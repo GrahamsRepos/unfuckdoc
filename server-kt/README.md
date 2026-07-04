@@ -89,7 +89,7 @@ curl http://localhost:8080/api/schema | jq        # mapping -> JSON Schema
 build.gradle.kts                 Ktor 3 + kotlin-guice 3 + opensearch-java + kotlinx.serialization + commons-csv
 src/main/kotlin/com/unfuckdoc/
   Application.kt                 module(controller) (reusable in tests) + embeddedServer(Netty)
-  di/AppModule.kt                KotlinModule — only the config binding (OpenSearchService)
+  di/AppModule.kt                KotlinModule — explicit bind<T>().in<Singleton>() for every service
   di/Injectors.kt                appInjector(overrides…) = Modules.override seam for tests
   domain/                        Classifier, Canonicalizer, Consolidator, Pipeline, Cleaner, IndexBuilder, Dsl, CsvReader
   api/                           DatasetService (single-dataset state), Overview/Search DTOs, JsonSchema

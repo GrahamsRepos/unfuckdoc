@@ -7,7 +7,6 @@ import com.unfuckdoc.domain.IndexBuilder
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.opensearch.OpenSearchService
 import jakarta.inject.Inject
-import jakarta.inject.Singleton
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -15,7 +14,6 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /** Holds the single loaded dataset (Python STATE parity) and builds the Overview + serves search. */
-@Singleton
 class DatasetService @Inject constructor(
     private val pipeline: Pipeline,
     private val consolidator: Consolidator,

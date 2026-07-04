@@ -3,7 +3,6 @@ package com.unfuckdoc.domain
 import ai.djl.huggingface.translator.TextEmbeddingTranslatorFactory
 import ai.djl.repository.zoo.Criteria
 import jakarta.inject.Inject
-import jakarta.inject.Singleton
 import kotlin.math.sqrt
 
 /**
@@ -11,7 +10,6 @@ import kotlin.math.sqrt
  * unrecognized field name actually needs a semantic match, so the common (all-recognized) path
  * never pays for it. Predictor access is synchronized (DJL predictors are not thread-safe).
  */
-@Singleton
 class MiniLmEmbedder @Inject constructor() : Embedder {
 
     override val enabled = true

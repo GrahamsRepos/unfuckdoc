@@ -1,7 +1,6 @@
 package com.unfuckdoc.domain
 
 import jakarta.inject.Inject
-import jakarta.inject.Singleton
 
 /**
  * Orchestrates classify -> canonicalize -> (light) clean over a parsed CSV, producing the same
@@ -9,7 +8,6 @@ import jakarta.inject.Singleton
  * Enrichment (embeddings/keywords) is intentionally out of this slice — see README for the
  * DJL / fastembed path.
  */
-@Singleton
 class Pipeline @Inject constructor(
     private val classifier: Classifier,
     private val canonicalizer: SemanticCanonicalizer,

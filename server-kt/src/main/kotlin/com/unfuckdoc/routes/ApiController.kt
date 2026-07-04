@@ -15,7 +15,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.utils.io.readRemaining
 import jakarta.inject.Inject
-import jakarta.inject.Singleton
 import kotlinx.io.readByteArray
 import kotlinx.serialization.Serializable
 import java.io.File
@@ -33,7 +32,6 @@ data class SearchRequest(
  * HTTP layer implementing the API contract the RR7 frontend expects. Dependencies are injected by
  * Guice via the constructor (@Inject). `install(route)` attaches the handlers to a Ktor Route.
  */
-@Singleton
 class ApiController @Inject constructor(
     private val csv: CsvReader,
     private val dataset: DatasetService,

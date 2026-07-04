@@ -1,14 +1,12 @@
 package com.unfuckdoc.domain
 
 import jakarta.inject.Inject
-import jakarta.inject.Singleton
 
 /**
  * Deterministic column-name unification — Kotlin port of `canonicalize` / `CANON`.
  * CANON is ordered by priority: the first type-compatible canonical whose alias appears wins
  * (so "email_address" -> email, "Company Name" -> company); otherwise the column keeps its own name.
  */
-@Singleton
 class Canonicalizer @Inject constructor() {
 
     private data class Canon(val name: String, val aliases: Set<String>, val types: Set<String>?)

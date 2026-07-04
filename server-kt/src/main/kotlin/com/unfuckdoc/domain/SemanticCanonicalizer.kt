@@ -1,7 +1,6 @@
 package com.unfuckdoc.domain
 
 import jakarta.inject.Inject
-import jakarta.inject.Singleton
 
 /**
  * Canonicalization with a semantic fallback. The deterministic dictionary runs first (fast, $0);
@@ -10,7 +9,6 @@ import jakarta.inject.Singleton
  * ambiguous name (e.g. between first_name/last_name/full_name) is never force-routed — it stays
  * identity. Semantic assignments are tagged method="semantic" (counted like an LLM escalation).
  */
-@Singleton
 class SemanticCanonicalizer @Inject constructor(
     private val deterministic: Canonicalizer,
     private val embedder: Embedder,

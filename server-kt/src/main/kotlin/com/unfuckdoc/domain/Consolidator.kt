@@ -1,7 +1,6 @@
 package com.unfuckdoc.domain
 
 import jakarta.inject.Inject
-import jakarta.inject.Singleton
 import kotlinx.serialization.Serializable
 
 /** One canonical field's consolidation shape. */
@@ -23,7 +22,6 @@ data class ConsolidateResult(val unified: List<Unified>, val docs: List<Map<Stri
  * (survivorship) vs array (concurrent+distinct), and array-ification is gated on a shared column
  * stem. Kotlin port of the Python consolidation.
  */
-@Singleton
 class Consolidator @Inject constructor() {
 
     private data class Shape(

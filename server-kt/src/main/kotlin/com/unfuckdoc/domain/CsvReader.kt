@@ -1,14 +1,12 @@
 package com.unfuckdoc.domain
 
 import jakarta.inject.Inject
-import jakarta.inject.Singleton
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.csv.CSVRecord
 import java.io.StringReader
 
 /** Parse CSV text into headers + rows (blank cells become null — coverage, not signal). */
-@Singleton
 class CsvReader @Inject constructor() {
     fun parse(text: String): Pair<List<String>, List<Map<String, String?>>> {
         val format: CSVFormat = CSVFormat.DEFAULT.builder()
