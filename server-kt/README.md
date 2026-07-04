@@ -88,7 +88,7 @@ curl http://localhost:8080/api/schema | jq        # mapping -> JSON Schema
 ```
 build.gradle.kts                 Ktor 3 + kotlin-guice 3 + opensearch-java + kotlinx.serialization + commons-csv
 src/main/kotlin/com/unfuckdoc/
-  Application.kt                 module(controller) (reusable in tests) + embeddedServer(Netty)
+  Application.kt                 installApp(injector) primitive (shared by main + tests) + embeddedServer(Netty)
   di/AppModule.kt                KotlinModule — explicit bind<T>().in<Singleton>() for every service
   di/Injectors.kt                appInjector(overrides…) = Modules.override seam for tests
   domain/                        Classifier, Canonicalizer, Consolidator, Pipeline, Cleaner, IndexBuilder, Dsl, CsvReader
@@ -96,5 +96,7 @@ src/main/kotlin/com/unfuckdoc/
   opensearch/OpenSearchService   opensearch-java client (index + search)
   routes/ApiController.kt        @Inject controller — /health, /api/{samples,overview,load_sample,upload,search,schema}
 src/test/kotlin/com/unfuckdoc/
-  ApiControllerTest.kt           real graph + MockK-swapped OpenSearchService via appInjector override
+  support/IntegrationTest.kt     base: boots installApp over a Guice-bound MockK OpenSearch (+ embedder option)
+  AppIntegrationTest.kt          HTTP integration tests: overview/load/index(mock)/search/schema
+  SemanticCanonicalizerTest.kt   unit: real MiniLM — synonym resolution + guards
 ```
