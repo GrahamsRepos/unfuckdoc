@@ -54,6 +54,25 @@
   .k-identifier{background:#21262d;color:#adbac7}
   .k-boolean{background:#3a1e0c;color:#ffa657}
   .canon{color:#7ee787;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  /* opensearch structure tree */
+  .ostree{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+  .osnode{padding:6px 0;border-bottom:1px solid var(--line)}
+  .osnode:last-child{border-bottom:0}
+  .osfield{color:var(--ink);font-weight:600}
+  .oschild{margin-left:22px;border-left:2px solid var(--line);padding-left:14px;margin-top:6px}
+  .oschild .osnode{border-bottom:0;padding:3px 0}
+  .ostype{display:inline-block;padding:1px 8px;border-radius:5px;font-size:11px;font-weight:600;margin-left:8px}
+  .t-keyword{background:#21262d;color:#adbac7}
+  .t-text{background:#12331f;color:#7ee787}
+  .t-double,.t-long,.t-integer,.t-float{background:#12314f;color:#79c0ff}
+  .t-date{background:#3a2d0c;color:#e3b341}
+  .t-boolean{background:#3a1e0c;color:#ffa657}
+  .t-knn_vector{background:#2a1b45;color:#d2a8ff}
+  .t-object{background:#0f2f33;color:#76e3e8}
+  .oscap{color:var(--mut);font-size:11.5px;margin-left:8px}
+  .osshape{color:#d2a8ff;font-size:11px;margin-left:6px}
+  .oshead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+  .oshead code{font-size:12px}
   .mut{color:var(--mut)} .no{color:var(--bad)}
   .bar{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;min-width:60px}
   .bar>i{display:block;height:100%;background:var(--acc)}
@@ -176,6 +195,18 @@
       </div>
     </div>
 
+    <!-- OPENSEARCH STRUCTURE -->
+    <div class="card" id="osCard">
+      <div class="oshead">
+        <h2>OpenSearch index structure</h2>
+        <span id="osMeta" class="mut"></span>
+      </div>
+      <p class="hint">The typed mapping generated for this dataset — what the messy CSV becomes in the DB.
+         Each field shows its OpenSearch type and the query it enables. Free-text columns fan out into a
+         BM25 summary, a keyword facet, and a kNN vector.</p>
+      <div class="ostree" id="ostree"></div>
+    </div>
+
     <!-- CLASSIFICATION TABLE -->
     <div class="card">
       <h2>Per-column classification</h2>
@@ -286,6 +317,7 @@ function render(d){
   merge(d.merge_groups);
   registry(d.registry);
   consolidation(d.unified);
+  osStructure(d.mapping, d.unified, d.opensearch);
   colsTable(d.columns);
   tags(d.tags);
   searchSetup(d);
@@ -356,6 +388,57 @@ function registry(groups){
   });
 }
 $('#resetReg').addEventListener('click', async ()=>{ await jpost('/api/reset_registry',{}); if(DATA){ DATA.registry=[]; registry([]); } });
+
+function osStructure(mapping, unified, os){
+  const box=$('#ostree'); box.innerHTML='';
+  if(!mapping || !mapping.mappings){ $('#osCard').classList.add('hidden'); return; }
+  $('#osCard').classList.remove('hidden');
+  // meta line: live index name + doc count if indexed
+  const meta=$('#osMeta');
+  if(os && os.status==='indexed') meta.innerHTML=`live · <code>${os.index}</code> · ${os.count} docs · <span style="color:var(--good)">index.knn ✓</span>`;
+  else meta.innerHTML=`generated mapping · <span class="mut">not indexed live</span>`;
+
+  const props=mapping.mappings.properties||{};
+  const shapeOf={}; (unified||[]).forEach(u=> shapeOf[u.canonical]=u);
+  const CAP={keyword:'exact term filter / facet', text:'full-text (BM25)', double:'range filter / sort',
+             long:'range filter / sort', date:'date range', boolean:'boolean filter',
+             knn_vector:'semantic search (kNN)', object:'nested members'};
+  // group the *_summary/_keywords/_vector props under their free-text parent
+  const SUF=['_summary','_keywords','_vector'];
+  const base={}, childOf={};
+  Object.keys(props).forEach(k=>{
+    const s=SUF.find(x=>k.endsWith(x));
+    if(s){ const p=k.slice(0,-s.length); (childOf[p]=childOf[p]||[]).push(k); }
+    else base[k]=props[k];
+  });
+
+  function typeBadge(def){
+    if(def.type==='knn_vector') return `<span class="ostype t-knn_vector">knn_vector</span>`;
+    if(def.properties) return `<span class="ostype t-object">object</span>`;
+    return `<span class="ostype t-${def.type}">${def.type}</span>`;
+  }
+  function capNote(def){
+    if(def.type==='knn_vector') return `<span class="oscap">${CAP.knn_vector} · ${def.dimension}-dim · ${def.method.name.toUpperCase()} / ${def.method.space_type.replace('simil','')}</span>`;
+    if(def.properties) return `<span class="oscap">${CAP.object}</span>`;
+    return `<span class="oscap">${CAP[def.type]||''}</span>`;
+  }
+  function node(name, def, sh){
+    const wrap=el('div','osnode');
+    let shape='';
+    if(sh){ shape = sh.cardinality==='array'
+       ? `<span class="osshape">[ array · ${sh.style} ]</span>`
+       : (sh.sources && sh.sources.length>1 ? `<span class="osshape">(coalesced)</span>` : ''); }
+    wrap.innerHTML=`<span class="osfield">${name}</span>${typeBadge(def)}${capNote(def)}${shape}`;
+    // children: object subfields, or free-text enrichment fields
+    const kids=el('div','oschild'); let has=false;
+    if(def.properties){ Object.entries(def.properties).forEach(([k,d])=>{ kids.appendChild(node(k,d)); has=true; }); }
+    (childOf[name]||[]).forEach(ck=>{ kids.appendChild(node(ck, props[ck])); has=true; });
+    if(has) wrap.appendChild(kids);
+    return wrap;
+  }
+  // render base fields; free-text parent first-classes its enrichment children
+  Object.keys(base).forEach(k=> box.appendChild(node(k, base[k], shapeOf[k])));
+}
 
 function consolidation(unified){
   const tb=$('#cons').querySelector('tbody'); tb.innerHTML='';

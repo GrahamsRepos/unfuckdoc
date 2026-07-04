@@ -179,7 +179,7 @@ def _overview():
                 columns=columns, kind_counts=dict(kind_counts),
                 merge_groups=merge, fuzzy=res["fuzzy"], tags=tags,
                 all_tags=[t for t, _ in all_tags.most_common(40)],
-                unified=unified, facets=_facets(res),
+                unified=unified, facets=_facets(res), mapping=res["mapping"],
                 sample_docs=samples, display_columns=_display_columns(res),
                 registry=_registry_view(),
                 opensearch=STATE.get("opensearch", {"status": "unknown"}))
