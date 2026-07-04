@@ -60,6 +60,12 @@ class ApiController @Inject constructor(
 
         get("/api/overview") { call.respond(dataset.overview()) }
 
+        get("/api/schema") {
+            val s = dataset.schema()
+                ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "load a dataset first"))
+            call.respond(s)
+        }
+
         post("/api/load_sample") {
             val name = call.receive<LoadRequest>().name
             val text = sampleText(name)

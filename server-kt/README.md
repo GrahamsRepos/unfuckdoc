@@ -41,11 +41,25 @@ Verified against the live cluster on `:9200`: `POST /api/index?sample=…` creat
 (`amount>=200000`), and BM25 text match (`q=renewed`). Note: keyword fields are exact-match (analyzed
 BM25 applies only to `text` fields) — real-DB behavior, unlike the Python in-memory substring search.
 
+## Frontend contract (the RR7 SSR app runs on this)
+
+The controller implements the API the `web/` frontend expects (snake_case via
+`JsonNamingStrategy.SnakeCase`), backed by a single-dataset `DatasetService` (Python STATE parity):
+
+- `GET  /api/samples` · `GET /api/overview`
+- `POST /api/load_sample {name}` · `POST /api/upload` (multipart) — process → consolidate → index
+- `POST /api/search {q,mode,field,tag,filters,size}` — keyword + range/date field filters
+- `GET  /api/schema` — **OpenSearch mapping → JSON Schema (Draft 2020-12)**; arrays/`{type,value}`
+  objects/vectors preserved from the consolidation metadata.
+
+Point the frontend at it: `cd web && API_URL=http://localhost:8080 npm run dev`.
+
 ## Not in this slice (the ML 20%)
 
-Enrichment — embeddings, keyword extraction, summarization — is intentionally omitted. On the JVM the
-production path is **DJL** or **fastembed-java** (ONNX Runtime) to run `all-MiniLM-L6-v2` in-process
-(same 384-d vectors, feeding a `knn_vector` field), plus Smile/EJML for the LSA fallback.
+Enrichment — embeddings, keyword extraction, summarization — is intentionally omitted (so `tags`/
+semantic search are absent and the frontend degrades to keyword mode). On the JVM the production path
+is **DJL** or **fastembed-java** (ONNX Runtime) to run `all-MiniLM-L6-v2` in-process (same 384-d
+vectors, feeding a `knn_vector` field), plus Smile/EJML for the LSA fallback.
 
 ## Run
 
@@ -54,9 +68,9 @@ production path is **DJL** or **fastembed-java** (ONNX Runtime) to run `all-Mini
 ```
 
 ```bash
-curl http://localhost:8080/api/samples
-curl -X POST "http://localhost:8080/api/process?sample=wine.csv"      # classify a bundled sample
-curl -X POST http://localhost:8080/api/process --data-binary @my.csv  # or a raw CSV body
+curl -X POST http://localhost:8080/api/load_sample -d '{"name":"samples/multi_contacts.csv"}' \
+  -H 'Content-Type: application/json'
+curl http://localhost:8080/api/schema | jq        # mapping -> JSON Schema
 ```
 
 ## Layout
@@ -67,9 +81,10 @@ src/main/kotlin/com/unfuckdoc/
   Application.kt                 module(controller) (reusable in tests) + embeddedServer(Netty)
   di/AppModule.kt                KotlinModule — only the config binding (OpenSearchService)
   di/Injectors.kt                appInjector(overrides…) = Modules.override seam for tests
-  domain/                        Classifier, Canonicalizer, Pipeline, IndexBuilder, Dsl, CsvReader, Models
+  domain/                        Classifier, Canonicalizer, Consolidator, Pipeline, Cleaner, IndexBuilder, Dsl, CsvReader
+  api/                           DatasetService (single-dataset state), Overview/Search DTOs, JsonSchema
   opensearch/OpenSearchService   opensearch-java client (index + search)
-  routes/ApiController.kt        @Inject controller — /health, /api/{samples,process,index,search}
+  routes/ApiController.kt        @Inject controller — /health, /api/{samples,overview,load_sample,upload,search,schema}
 src/test/kotlin/com/unfuckdoc/
   ApiControllerTest.kt           real graph + MockK-swapped OpenSearchService via appInjector override
 ```

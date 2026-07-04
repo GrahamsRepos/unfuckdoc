@@ -34,6 +34,11 @@ class DatasetService @Inject constructor(
 
     fun overview(): Overview = current?.overview ?: Overview(loaded = false)
 
+    /** JSON Schema (Draft 2020-12) for the loaded dataset's mapping, or null if nothing loaded. */
+    fun schema(): JsonObject? = current?.overview?.let { ov ->
+        JsonSchema.convert(ov.mapping as JsonObject, ov.unified, ov.filename ?: "dataset")
+    }
+
     fun load(filename: String, headers: List<String>, rows: List<Map<String, String?>>): Overview {
         val result = pipeline.process(filename, headers, rows)
         val cons = consolidator.consolidate(rows, result.columns)
@@ -104,7 +109,19 @@ class DatasetService @Inject constructor(
     private fun buildMapping(unified: List<com.unfuckdoc.domain.Unified>): JsonObject = buildJsonObject {
         putJsonObject("mappings") {
             putJsonObject("properties") {
-                unified.forEach { u -> putJsonObject(u.canonical) { put("type", u.osType ?: "keyword") } }
+                unified.forEach { u ->
+                    if (u.cardinality == "array" && u.style == "semantic") {
+                        // labeled {type,value} array -> object mapping (matches the stored docs)
+                        putJsonObject(u.canonical) {
+                            putJsonObject("properties") {
+                                putJsonObject("type") { put("type", "keyword") }
+                                putJsonObject("value") { put("type", u.osType ?: "keyword") }
+                            }
+                        }
+                    } else {
+                        putJsonObject(u.canonical) { put("type", u.osType ?: "keyword") }
+                    }
+                }
             }
         }
     }
