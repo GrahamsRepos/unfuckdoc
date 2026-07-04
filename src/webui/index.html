@@ -136,6 +136,25 @@
     <div class="osline" id="osline"></div>
   </div>
 
+  <!-- MATCH TWO DATASETS -->
+  <div class="card" id="matchCard">
+    <h2>Match two datasets</h2>
+    <p class="hint">Unify the schema, then link the records. Pick two files and a join field — even if the
+       column names differ (<code>Email</code> vs <code>e-mail</code>), they share a canonical key.
+       Matching is fuzzy, so near-duplicate values (<code>Acme Inc</code> ≈ <code>Acme Incorporated</code>) still link.</p>
+    <div class="searchbar">
+      <select id="mA" title="dataset A"></select>
+      <span class="mut">match against</span>
+      <select id="mB" title="dataset B"></select>
+      <select id="mKey" title="join field" class="hidden"></select>
+      <label class="mut" style="display:flex;align-items:center;gap:6px">threshold
+        <input id="mThr" type="range" min="0.5" max="1" step="0.01" value="0.85" style="vertical-align:middle">
+        <span id="mThrV" class="score">0.85</span></label>
+      <button class="btn" id="mGo">Match</button>
+    </div>
+    <div id="matchOut"></div>
+  </div>
+
   <div id="dash" class="hidden">
     <!-- SUMMARY -->
     <div class="card">
@@ -287,11 +306,67 @@ function setStatus(t){ $('#status').textContent = t; }
 // ---- load sample list ----
 (async () => {
   const d = await (await fetch('/api/samples')).json();
+  const list = d.samples||[];
   const sel = $('#samples');
-  (d.samples||[]).forEach(s => sel.appendChild(el('option', null, s)).value = s);
+  list.forEach(s => sel.appendChild(el('option', null, s)).value = s);
+  // match selectors
+  list.forEach(s => $('#mA').appendChild(el('option', null, s)).value = s);
+  list.forEach(s => $('#mB').appendChild(el('option', null, s)).value = s);
+  const pick=(want,def)=> list.find(s=>s.includes(want)) || list[def] || '';
+  $('#mA').value = pick('crm_contacts',0);
+  $('#mB').value = pick('sales_leads',1);
+  loadMatchKeys();
   const cur = await (await fetch('/api/overview')).json();
   if(cur.loaded) render(cur);
 })();
+
+// ---- match two datasets ----
+$('#mA').addEventListener('change', loadMatchKeys);
+$('#mB').addEventListener('change', loadMatchKeys);
+$('#mThr').addEventListener('input', ()=> $('#mThrV').textContent=(+$('#mThr').value).toFixed(2));
+$('#mGo').addEventListener('click', runMatch);
+async function loadMatchKeys(){
+  const a=$('#mA').value, b=$('#mB').value; const ksel=$('#mKey');
+  if(!a||!b||a===b){ ksel.classList.add('hidden'); return; }
+  const d=await jpost('/api/match_candidates',{a,b});
+  ksel.innerHTML='';
+  (d.keys||[]).forEach(k=> ksel.appendChild(el('option',null,`${k.field}  (uniq ${k.uniqueness})`)).value=k.field);
+  ksel.classList.toggle('hidden', !(d.keys||[]).length);
+}
+async function runMatch(){
+  const a=$('#mA').value, b=$('#mB').value, key=$('#mKey').value, threshold=+$('#mThr').value;
+  const out=$('#matchOut');
+  if(a===b){ out.innerHTML='<div class="empty">pick two different datasets</div>'; return; }
+  out.innerHTML='<p class="hint">matching…</p>';
+  const d=await jpost('/api/match',{a,b,key,threshold});
+  if(d.error){ out.innerHTML=`<div class="empty">⚠ ${d.error}</div>`; return; }
+  const pct = d.keyed_a? Math.round(d.matched/d.keyed_a*100):0;
+  let html=`<div class="stats" style="margin:14px 0">
+    <div class="stat ok"><b>${d.matched}</b><span>matched (${pct}%)</span></div>
+    <div class="stat"><b>${d.exact}</b><span>exact</span></div>
+    <div class="stat"><b>${d.matched-d.exact}</b><span>fuzzy</span></div>
+    <div class="stat warn"><b>${d.unmatched_a}</b><span>only in A</span></div>
+    <div class="stat warn"><b>${d.unmatched_b}</b><span>only in B</span></div>
+   </div>
+   <p class="hint">joined <code>${a.split('/').pop()}</code> ⋈ <code>${b.split('/').pop()}</code> on
+     <span class="canon">${d.key}</span> · threshold ${d.threshold}</p>`;
+  if(d.pairs.length){
+    const ca=d.display_a, cb=d.display_b;
+    html+='<div class="scroll"><table><thead><tr><th>sim</th>';
+    ca.forEach(c=>html+=`<th>A · ${c}</th>`); html+='<th class="mut">⋈</th>';
+    cb.forEach(c=>html+=`<th>B · ${c}</th>`); html+='</tr></thead><tbody>';
+    d.pairs.forEach(p=>{
+      const cls = p.sim>=1?'':'style="color:var(--warn)"';
+      html+=`<tr><td class="score" ${cls}>${p.sim}</td>`;
+      ca.forEach(c=>html+=`<td>${p.a[c]||'<span class=mut>—</span>'}</td>`);
+      html+='<td class="mut">⋈</td>';
+      cb.forEach(c=>html+=`<td>${p.b[c]||'<span class=mut>—</span>'}</td>`);
+      html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  out.innerHTML=html;
+}
 
 // ---- main render ----
 function render(d){

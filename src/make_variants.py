@@ -199,4 +199,34 @@ write("properties.csv",
        "listed_date","listing_description","agent_email","agent_phone"],
       properties())
 
-print(f"\ndone (seed={SEED}) — six domain CSVs written to data/samples/")
+# ---------------------------------------------------------------- fuzzy-match demo pair
+# Same entities in two files, but B's key values are PERTURBED (company suffix variants, typos,
+# middle initials) so matching must be FUZZY, not exact. Column names differ too (canonical unifies).
+FUZZ_CO = ["Acme Logistics","Blue Harbor Foods","Vertex Analytics","Sunrise Textiles",
+           "Ironclad Security","Meridian Health","Cobalt Robotics","Evergreen Farms",
+           "Lumen Media","Harborview Bank","Quantum Freight","Redwood Ceramics"]
+def perturb_company(c):
+    c = random.choice([c, c+" Inc", c+" Incorporated", c+" Ltd", c+" LLC", c+" Co"])
+    c = c.replace("&", "and") if random.random() < 0.3 else c
+    if random.random() < 0.15:                      # small typo
+        i = random.randint(0, len(c)-1); c = c[:i] + c[i+1:]
+    return c
+def perturb_email(e):
+    if random.random() < 0.2:                        # typo in local part
+        i = random.randint(0, e.index("@")-1); e = e[:i] + e[i+1:]
+    if random.random() < 0.2:                        # different domain
+        e = e.split("@")[0] + "@" + random.choice(["work","company","hq"]) + ".com"
+    return e
+
+ENTITIES = []
+for i in range(70):
+    nm = name(); ENTITIES.append(dict(nm=nm, co=random.choice(FUZZ_CO), em=email(nm), city=random.choice(CITIES)))
+
+write("directory_a.csv", ["company","contact_name","email","city"],
+      [[e["co"], e["nm"], e["em"], e["city"]] for e in ENTITIES])
+write("directory_b.csv", ["organization","full_name","e-mail","town"],
+      [[perturb_company(e["co"]),
+        e["nm"] + (f" {random.choice('ABCDEFGHJKLM')}." if random.random() < 0.3 else ""),
+        perturb_email(e["em"]), e["city"]] for e in ENTITIES])
+
+print(f"\ndone (seed={SEED}) — six domain CSVs + a fuzzy-match pair written to data/samples/")

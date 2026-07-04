@@ -9,6 +9,7 @@ if a local OpenSearch is reachable we ALSO index the docs so you can see them la
 Run:  python3 src/webapp.py   then open http://localhost:5001
 """
 import os, re, json, collections
+from difflib import SequenceMatcher
 from flask import Flask, request, jsonify, send_from_directory
 import numpy as np, pandas as pd
 
@@ -318,6 +319,121 @@ def search():
         out.append(dict(score=h["score"], row=row, keywords=(kw or [])[:5]))
     return jsonify(mode=mode, field=field, tag=tag, filters=filters, count=len(out),
                    display_columns=disp, results=out)
+
+
+# ----------------------------- matching two datasets -----------------------------
+_PCACHE = {}  # sample-name -> processed result (matching reprocesses bundled files on demand)
+
+def _processed(name):
+    if name not in _PCACHE:
+        path = os.path.normpath(os.path.join(DATA_DIR, name))
+        if not path.startswith(os.path.normpath(DATA_DIR)) or not os.path.isfile(path):
+            raise FileNotFoundError(name)
+        _PCACHE[name] = process_dataframe(pd.read_csv(path, nrows=MAX_ROWS))
+    return _PCACHE[name]
+
+def _norm_key(v, canon):
+    """Normalize a key value before comparison (the blocking/standardization step)."""
+    s = _flatten(v).strip().lower()
+    if canon == "email":  return s.replace(" ", "")
+    if canon == "phone":  return re.sub(r"\D", "", s)
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", "", s)).strip()
+
+def _sim(a, b):
+    """Fuzzy similarity in [0,1]: 1.0 only when normalized values are identical; variants
+    ('Acme Logistics' vs 'Acme Logistics Inc', 'Harborview Bank' vs 'Harborview Bnk') score high
+    but below 1.0. Token-sort ratio makes it robust to word order and extra suffix words."""
+    if not a or not b: return 0.0
+    if a == b: return 1.0
+    base = SequenceMatcher(None, a, b).ratio()
+    sa, sb = " ".join(sorted(a.split())), " ".join(sorted(b.split()))
+    return round(max(base, SequenceMatcher(None, sa, sb).ratio()), 3)
+
+def _shared_keys(ra, rb):
+    """Canonical fields present in BOTH datasets that make sensible join keys (not free text)."""
+    def prim(res): return {u["canonical"]: u for u in res["unified"] if u["kind"] != "free_text"}
+    A, B = prim(ra), prim(rb)
+    keys = []
+    for canon in A.keys() & B.keys():
+        # uniqueness of the key in A (a good key is close to unique)
+        vals = [_norm_key(d.get(canon), canon) for d in ra["docs"] if d.get(canon) is not None]
+        distinct = len(set(vals)); fill = len(vals)
+        keys.append(dict(field=canon, kind=A[canon]["kind"],
+                         uniqueness=round(distinct / fill, 3) if fill else 0,
+                         fill_a=fill, fill_b=sum(1 for d in rb["docs"] if d.get(canon) is not None)))
+    # string keys (email/phone/id/name) make better join keys than raw numbers/dates
+    keys.sort(key=lambda k: (k["kind"] == "numeric", k["kind"] == "date",
+                             -k["uniqueness"], -k["fill_a"]))
+    return keys
+
+def _match_display(res):
+    cols = _display_columns(res)
+    return [c for c in cols if not c.endswith("_summary")][:4]
+
+@app.route("/api/match_candidates", methods=["POST"])
+def match_candidates():
+    body = request.get_json(force=True) or {}
+    try:
+        ra, rb = _processed(body["a"]), _processed(body["b"])
+    except Exception as e:
+        return jsonify(error=f"could not load datasets: {e}"), 400
+    return jsonify(keys=_shared_keys(ra, rb))
+
+@app.route("/api/match", methods=["POST"])
+def match():
+    body = request.get_json(force=True) or {}
+    a, b = body.get("a"), body.get("b")
+    key = body.get("key")
+    threshold = float(body.get("threshold", 0.85))
+    if a == b:
+        return jsonify(error="pick two different datasets"), 400
+    try:
+        ra, rb = _processed(a), _processed(b)
+    except Exception as e:
+        return jsonify(error=f"could not load datasets: {e}"), 400
+    if not key:
+        cands = _shared_keys(ra, rb)
+        if not cands:
+            return jsonify(error="no shared canonical field to match on"), 400
+        key = cands[0]["field"]
+
+    # block dataset B by first char of the normalized key to keep it fast
+    blocks = collections.defaultdict(list)
+    for j, d in enumerate(rb["docs"]):
+        nk = _norm_key(d.get(key), key)
+        if nk: blocks[nk[0]].append((j, nk))
+
+    dispA, dispB = _match_display(ra), _match_display(rb)
+    pairs, matched_a, exact = [], 0, 0
+    matched_b_idx = set()
+    for i, d in enumerate(ra["docs"]):
+        nk = _norm_key(d.get(key), key)
+        if not nk:
+            continue
+        best = (0.0, -1)
+        for j, bk in blocks.get(nk[0], []):        # candidates sharing the first char
+            s = _sim(nk, bk)
+            if s > best[0]:
+                best = (s, j)
+        if best[0] >= threshold and best[1] >= 0:
+            matched_a += 1; matched_b_idx.add(best[1])
+            if best[0] >= 1.0: exact += 1
+            if len(pairs) < 500:
+                db = rb["docs"][best[1]]
+                pairs.append(dict(sim=best[0],
+                                  a={c: _flatten(d.get(c)) for c in dispA},
+                                  b={c: _flatten(db.get(c)) for c in dispB}))
+    # show the interesting fuzzy (sub-1.0) matches first, then exacts
+    pairs.sort(key=lambda p: (p["sim"] >= 1.0, -p["sim"]))
+    pairs = pairs[:25]
+    fill_a = sum(1 for d in ra["docs"] if _norm_key(d.get(key), key))
+    return jsonify(key=key, threshold=threshold,
+                   rows_a=ra["n_rows"], rows_b=rb["n_rows"],
+                   keyed_a=fill_a,
+                   matched=matched_a, exact=exact,
+                   unmatched_a=fill_a - matched_a,
+                   unmatched_b=rb["n_rows"] - len(matched_b_idx),
+                   display_a=dispA, display_b=dispB, pairs=pairs)
 
 
 if __name__ == "__main__":
