@@ -1,36 +1,45 @@
 package com.unfuckdoc.routes
 
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import com.unfuckdoc.domain.CsvReader
 import com.unfuckdoc.domain.Dsl
 import com.unfuckdoc.domain.IndexBuilder
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.opensearch.OpenSearchService
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.request.receiveText
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import io.ktor.server.application.Application
-import io.ktor.server.request.receiveText
-import io.ktor.server.response.respond
-import io.ktor.server.response.respondText
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import io.ktor.server.routing.routing
-import com.google.inject.Injector
 import java.io.File
 
-private fun slug(filename: String): String =
-    "kt_" + filename.substringBeforeLast('.').lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_').take(40)
+/**
+ * HTTP layer. Dependencies are injected by Guice via the constructor (@Inject); the class is
+ * just-in-time bound (no explicit binding in AppModule needed). `install(route)` attaches the
+ * handlers to a Ktor Route.
+ */
+@Singleton
+class ApiController @Inject constructor(
+    private val pipeline: Pipeline,
+    private val csv: CsvReader,
+    private val indexBuilder: IndexBuilder,
+    private val opensearch: OpenSearchService,
+) {
+    private val dataDir = File(System.getenv("DATA_DIR") ?: "../data").canonicalFile
 
-fun Application.registerRoutes(injector: Injector) {
-    val pipeline = injector.getInstance(Pipeline::class.java)
-    val csv = injector.getInstance(CsvReader::class.java)
-    val indexBuilder = injector.getInstance(IndexBuilder::class.java)
-    val opensearch = injector.getInstance(OpenSearchService::class.java)
-    val dataDir = File(System.getenv("DATA_DIR") ?: "../data").canonicalFile
+    private fun slug(filename: String): String =
+        "kt_" + filename.substringBeforeLast('.').lowercase()
+            .replace(Regex("[^a-z0-9]+"), "_").trim('_').take(40)
 
-    fun readCsv(sample: String?, body: String): Pair<List<String>, List<Map<String, String?>>>? {
+    /** Resolve CSV text from a bundled ?sample= (path-guarded) or the raw request body. */
+    private fun readCsv(sample: String?, body: String): Pair<List<String>, List<Map<String, String?>>>? {
         val text = if (sample != null) {
             val f = File(dataDir, sample).canonicalFile
             if (!f.path.startsWith(dataDir.path) || !f.isFile) return null
@@ -39,7 +48,7 @@ fun Application.registerRoutes(injector: Injector) {
         return csv.parse(text)
     }
 
-    routing {
+    fun install(route: Route): Unit = with(route) {
         get("/health") { call.respondText("ok") }
 
         get("/api/samples") {
@@ -52,30 +61,19 @@ fun Application.registerRoutes(injector: Injector) {
             call.respond(mapOf("samples" to found))
         }
 
-        // Classify + canonicalize a CSV. Source: ?sample=<relpath under data/> OR the raw request body.
-        post("/api/process") {
-            val sample = call.request.queryParameters["sample"]
-            val text = if (sample != null) {
-                val f = File(dataDir, sample).canonicalFile
-                if (!f.path.startsWith(dataDir.path) || !f.isFile) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "unknown sample"))
-                    return@post
-                }
-                f.readText()
-            } else {
-                call.receiveText()
-            }
-            val (headers, rows) = csv.parse(text)
-            if (headers.isEmpty()) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "no columns parsed"))
-                return@post
-            }
-            val filename = sample?.substringAfterLast('/') ?: "upload.csv"
-            call.respond(pipeline.process(filename, headers, rows))
-        }
-
         get("/api/opensearch") {
             call.respond(mapOf("available" to opensearch.available().toString()))
+        }
+
+        // Classify + canonicalize a CSV (?sample= or raw body).
+        post("/api/process") {
+            val sample = call.request.queryParameters["sample"]
+            val parsed = readCsv(sample, call.receiveText())
+                ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "unknown sample"))
+            val (headers, rows) = parsed
+            if (headers.isEmpty())
+                return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "no columns parsed"))
+            call.respond(pipeline.process(sample?.substringAfterLast('/') ?: "upload.csv", headers, rows))
         }
 
         // Classify -> consolidate -> index into OpenSearch (real opensearch-java client).
@@ -99,11 +97,10 @@ fun Application.registerRoutes(injector: Injector) {
         // Build a query DSL from params, run it via opensearch-java, return hits + the DSL.
         post("/api/search") {
             val params = call.request.queryParameters
-            val index = params["index"] ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "index required"))
+            val index = params["index"]
+                ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "index required"))
             val q = params["q"]
-            val filters = params.entries()
-                .filter { it.key == "f" }
-                .flatMap { it.value }
+            val filters = params.entries().filter { it.key == "f" }.flatMap { it.value }
                 .mapNotNull { s -> s.indexOf(':').takeIf { it > 0 }?.let { s.substring(0, it) to s.substring(it + 1) } }
                 .toMap()
             val size = params["size"]?.toIntOrNull() ?: 10

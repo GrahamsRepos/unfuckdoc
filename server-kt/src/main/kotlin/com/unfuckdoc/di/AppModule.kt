@@ -1,36 +1,19 @@
 package com.unfuckdoc.di
 
-import com.google.inject.AbstractModule
 import com.google.inject.Provides
-import com.google.inject.Singleton
-import com.unfuckdoc.domain.Canonicalizer
-import com.unfuckdoc.domain.Classifier
-import com.unfuckdoc.domain.CsvReader
-import com.unfuckdoc.domain.IndexBuilder
-import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.opensearch.OpenSearchService
+import dev.misfitlabs.kotlinguice4.KotlinModule
+import jakarta.inject.Singleton
 
 /**
- * Guice wiring. @Provides methods keep the domain classes DI-agnostic (no @Inject annotations),
- * and Guice resolves the graph (e.g. Pipeline's Classifier + Canonicalizer) automatically.
+ * Guice wiring via kotlin-guice's KotlinModule. The pipeline classes are @Inject/@Singleton, so
+ * Guice just-in-time binds them — the module only provides the binding that needs runtime config
+ * (OpenSearchService host/port). Everything is overridable in tests via [appInjector].
  */
-class AppModule : AbstractModule() {
-
-    @Provides @Singleton
-    fun classifier(): Classifier = Classifier()
-
-    @Provides @Singleton
-    fun canonicalizer(): Canonicalizer = Canonicalizer()
-
-    @Provides @Singleton
-    fun csvReader(): CsvReader = CsvReader()
-
-    @Provides @Singleton
-    fun indexBuilder(): IndexBuilder = IndexBuilder()
-
-    @Provides @Singleton
-    fun pipeline(classifier: Classifier, canonicalizer: Canonicalizer): Pipeline =
-        Pipeline(classifier, canonicalizer)
+class AppModule : KotlinModule() {
+    override fun configure() {
+        // no explicit bindings — @Inject constructors are just-in-time bound
+    }
 
     @Provides @Singleton
     fun openSearch(): OpenSearchService = OpenSearchService(

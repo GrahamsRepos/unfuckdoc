@@ -1,7 +1,19 @@
 # unfuckdoc-kt — Kotlin / Ktor / Guice exploration
 
 A spike porting the **deterministic core** of the pipeline to Kotlin, to feel the ergonomics of a
-JVM backend (Ktor server + Guice DI). Java 21, Gradle wrapper, no external services.
+JVM backend: Ktor server + **kotlin-guice** DI (Kotlin-optimised Guice 7 DSL, constructor `@Inject`
+with standard `jakarta.inject`). Java 21, Gradle wrapper.
+
+## DI & testability
+
+- Services and the HTTP `ApiController` use **constructor `@Inject` + `@Singleton`** (jakarta), so
+  Guice just-in-time binds the whole graph (`Pipeline ← Classifier, Canonicalizer`, etc.). The domain
+  classes depend only on standard `jakarta.inject`, not Guice.
+- `AppModule : KotlinModule()` provides only the config-dependent binding (`OpenSearchService`
+  host/port). `appInjector(vararg overrides)` wraps `Modules.override(AppModule()).with(...)`.
+- **Tests swap deps selectively:** `ApiControllerTest` builds the real container but overrides one
+  binding with a MockK — e.g. `bind<OpenSearchService>().toInstance(mock)` — so `/api/index` runs
+  against a mocked cluster while the real pipeline graph is wired normally. `./gradlew test`.
 
 ## What's ported (and verified byte-identical to the Python pipeline)
 
@@ -50,11 +62,14 @@ curl -X POST http://localhost:8080/api/process --data-binary @my.csv  # or a raw
 ## Layout
 
 ```
-build.gradle.kts                 Ktor 3 + Guice 7 + opensearch-java + kotlinx.serialization + commons-csv
+build.gradle.kts                 Ktor 3 + kotlin-guice 3 + opensearch-java + kotlinx.serialization + commons-csv
 src/main/kotlin/com/unfuckdoc/
-  Application.kt                 embeddedServer(Netty) + Guice injector + plugins (ContentNegotiation, ...)
-  di/AppModule.kt                Guice module (@Provides singletons) — pipeline graph
+  Application.kt                 module(controller) (reusable in tests) + embeddedServer(Netty)
+  di/AppModule.kt                KotlinModule — only the config binding (OpenSearchService)
+  di/Injectors.kt                appInjector(overrides…) = Modules.override seam for tests
   domain/                        Classifier, Canonicalizer, Pipeline, IndexBuilder, Dsl, CsvReader, Models
   opensearch/OpenSearchService   opensearch-java client (index + search)
-  routes/Routes.kt               /health, /api/samples, /api/process, /api/index, /api/search
+  routes/ApiController.kt        @Inject controller — /health, /api/{samples,process,index,search}
+src/test/kotlin/com/unfuckdoc/
+  ApiControllerTest.kt           real graph + MockK-swapped OpenSearchService via appInjector override
 ```

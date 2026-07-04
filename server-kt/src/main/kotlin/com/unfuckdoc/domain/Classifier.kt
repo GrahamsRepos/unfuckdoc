@@ -1,5 +1,7 @@
 package com.unfuckdoc.domain
 
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAccessor
 
@@ -8,7 +10,9 @@ import java.time.temporal.TemporalAccessor
  * clean_and_enrich.py. Emits a class plus a confidence *margin*; only below-margin columns
  * would escalate to an LLM (counted, never per-cell). No LLM is called here.
  */
-class Classifier(private val margin: Double = 0.25) {
+@Singleton
+class Classifier @Inject constructor() {
+    private val margin = 0.25
 
     private val bool = setOf("true", "false", "yes", "no")
     private val money = Regex("[,\\s$€£¥₹]")

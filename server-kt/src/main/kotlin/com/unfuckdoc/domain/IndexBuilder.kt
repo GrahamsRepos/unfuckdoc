@@ -1,5 +1,7 @@
 package com.unfuckdoc.domain
 
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -20,7 +22,8 @@ data class IndexBundle(
  * coalesce) plus the OpenSearch mapping — the input to indexing. Arrays/{type,value} objects from
  * the Python consolidation are out of this slice; scalar coalesce covers the common case.
  */
-class IndexBuilder {
+@Singleton
+class IndexBuilder @Inject constructor() {
     private val money = Regex("[,\\s$€£¥₹]")
     private val dateFormats = listOf(
         "yyyy-MM-dd", "yyyy/MM/dd", "MM/dd/yyyy", "M/d/yyyy", "d/M/yyyy",

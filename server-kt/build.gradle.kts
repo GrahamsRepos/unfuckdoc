@@ -20,8 +20,9 @@ dependencies {
     implementation("io.ktor:ktor-server-call-logging:$ktor")
     implementation("io.ktor:ktor-server-status-pages:$ktor")
 
-    // Google Guice DI
-    implementation("com.google.inject:guice:7.0.0")
+    // Kotlin-optimised Guice DSL (brings Guice 7 transitively) + standard jakarta.inject annotations
+    implementation("dev.misfitlabs.kotlinguice4:kotlin-guice:3.0.0")
+    implementation("jakarta.inject:jakarta.inject-api:2.0.1")
 
     // OpenSearch official Java client (+ Apache HttpClient5 transport)
     implementation("org.opensearch.client:opensearch-java:2.12.0")
@@ -34,6 +35,8 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host:$ktor")
+    testImplementation("io.ktor:ktor-client-content-negotiation:$ktor")
+    testImplementation("io.mockk:mockk:1.13.13")
 }
 
 application {
