@@ -299,8 +299,11 @@ def search():
             return jsonify(error="no free-text column to search semantically"), 400
         qv = res["embedders"][field].tf([q])[0]
         sims = res["vectors"][field] @ qv
+        EPS = 1e-6                                       # ignore zero/negative similarity
         for i in np.argsort(-sims):                     # apply filters before truncating to size
             i = int(i)
+            if sims[i] <= EPS:
+                break                                   # sorted desc: once ~0, the rest are too
             if keep(i):
                 hits.append(dict(score=round(float(sims[i]), 3), doc_id=i))
             if len(hits) >= size:
