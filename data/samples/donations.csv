@@ -1,0 +1,34 @@
+donor_name,gift_amount,currency,pledged_on,campaign,donor_email,home_city,postcode
+Noah Nguyen,3367,EUR,2024-12-08,Winter Aid,noah.nguyen@example.com,Austin,4459
+Leila Okoro,2798,GBP,2024-04-05,Reforest,leila.okoro@example.com,São Paulo,4223
+Omar Reddy,2340,USD,2024-10-16,Clean Water,omar.reddy@example.com,Berlin,5050
+Diego Moreno,4981,GBP,2023-03-14,Health Drive,diego.moreno@example.com,Austin,2707
+Noah Haddad,2401,USD,2023-01-05,Health Drive,noah.haddad@example.com,São Paulo,6282
+Sven Reddy,2022,GBP,2023-06-12,Winter Aid,sven.reddy@example.com,Lyon,1814
+Diego Nguyen,4272,USD,2022-12-15,School Meals,diego.nguyen@example.com,Toronto,9569
+Yuki Okoro,1336,GBP,2023-05-17,Reforest,yuki.okoro@example.com,Toronto,4138
+Priya Tanaka,859,JPY,2023-01-08,Winter Aid,priya.tanaka@example.com,Madrid,1016
+Wei Reddy,4813,JPY,2022-07-04,Clean Water,wei.reddy@example.com,Toronto,2670
+Amara Kovac,4606,USD,2022-09-15,Health Drive,amara.kovac@example.com,Austin,7807
+Amara Costa,1108,USD,2023-04-11,School Meals,amara.costa@example.com,Berlin,9984
+Leila Costa,1903,JPY,2024-01-08,Clean Water,leila.costa@example.com,Lyon,1067
+Yuki Nguyen,1401,JPY,2024-05-22,Reforest,yuki.nguyen@example.com,Austin,4838
+Leila Tanaka,4668,USD,2022-07-21,Reforest,leila.tanaka@example.com,Osaka,5653
+Grace Haddad,616,GBP,2023-12-25,School Meals,grace.haddad@example.com,Madrid,8403
+Sven Okoro,2407,GBP,2023-05-23,Reforest,sven.okoro@example.com,Mumbai,4219
+Leila Reddy,3605,USD,2022-08-13,Reforest,leila.reddy@example.com,Austin,7577
+Noah Nguyen,3908,GBP,2022-08-21,School Meals,noah.nguyen@example.com,Osaka,9305
+Freya Moreno,1270,GBP,2023-02-24,Winter Aid,freya.moreno@example.com,Madrid,3231
+Diego Okoro,729,EUR,2022-07-22,School Meals,diego.okoro@example.com,Toronto,6246
+Amara Moreno,3628,JPY,2023-12-06,Winter Aid,amara.moreno@example.com,Lyon,2498
+Sven Okoro,3065,EUR,2024-09-19,Winter Aid,sven.okoro@example.com,Mumbai,6137
+Mei Silva,1704,GBP,2024-11-12,School Meals,mei.silva@example.com,Austin,1719
+Grace Haddad,376,USD,2022-03-12,School Meals,grace.haddad@example.com,Malmö,3867
+Omar Tanaka,627,EUR,2023-09-05,Health Drive,omar.tanaka@example.com,São Paulo,1788
+Yuki Okoro,4906,GBP,2023-12-27,Clean Water,yuki.okoro@example.com,São Paulo,7670
+Wei Kovac,4746,GBP,2024-03-19,Winter Aid,wei.kovac@example.com,Mumbai,1259
+Mei Nguyen,934,GBP,2022-07-09,Health Drive,mei.nguyen@example.com,Berlin,4436
+Wei Costa,233,JPY,2022-11-10,Clean Water,wei.costa@example.com,Madrid,4339
+Diego Costa,644,USD,2022-01-13,Winter Aid,diego.costa@example.com,Osaka,8010
+Freya Bauer,4545,JPY,2024-03-05,School Meals,freya.bauer@example.com,São Paulo,5722
+Noah Khan,245,USD,2022-10-26,School Meals,noah.khan@example.com,Osaka,5323

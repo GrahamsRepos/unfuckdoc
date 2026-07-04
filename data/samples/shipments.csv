@@ -1,0 +1,33 @@
+tracking_no,consignee,sender_email,origin_city,destination_country,weight_kg,freight_cost,dispatched_at,carrier
+TRK64278912,Leila Costa,leila.costa@example.com,Lagos,Brazil,364.7,$1865,2023-03-17,Redwood Transport
+TRK16421877,Yuki Haddad,yuki.haddad@example.com,Toronto,Brazil,360.7,$1572,2023-07-20,Quantum Freight
+TRK48862916,Freya Costa,freya.costa@example.com,Malmö,Brazil,87.1,$2226,2024-08-02,Blue Harbor Logistics
+TRK74084959,Grace Nguyen,grace.nguyen@example.com,Osaka,Germany,389.5,$670,2023-02-04,Blue Harbor Logistics
+TRK73241351,Sven Khan,sven.khan@example.com,Malmö,Germany,421.3,$106,2023-04-05,Atlas Cargo
+TRK92269181,Diego Kovac,diego.kovac@example.com,Osaka,Brazil,304.5,$1859,2023-02-11,Quantum Freight
+TRK94654463,Freya Kovac,freya.kovac@example.com,Osaka,Spain,180.3,$2742,2024-12-10,Atlas Cargo
+TRK34841583,Noah Costa,noah.costa@example.com,Malmö,USA,10.5,$1424,2024-10-12,Redwood Transport
+TRK20874267,Mei Bauer,mei.bauer@example.com,São Paulo,Japan,249.6,$453,2024-03-13,Atlas Cargo
+TRK60545769,Yuki Moreno,yuki.moreno@example.com,Toronto,Japan,410.1,$2584,2023-12-21,Quantum Freight
+TRK79671055,Grace Khan,grace.khan@example.com,Malmö,Sweden,344.4,$2024,2023-11-02,Quantum Freight
+TRK93122039,Noah Moreno,noah.moreno@example.com,Madrid,France,415.1,$3127,2023-07-09,Blue Harbor Logistics
+TRK98471613,Leila Kovac,leila.kovac@example.com,Berlin,Germany,357.6,$1212,2024-11-28,Atlas Cargo
+TRK95669419,Diego Silva,diego.silva@example.com,Toronto,Nigeria,200.4,$1353,2023-04-24,Blue Harbor Logistics
+TRK97719499,Leila Moreno,leila.moreno@example.com,Osaka,Spain,454.9,$145,2024-01-09,Redwood Transport
+TRK88551213,Amara Moreno,amara.moreno@example.com,Toronto,USA,289.8,$1749,2023-02-15,Blue Harbor Logistics
+TRK40413806,Grace Moreno,grace.moreno@example.com,Berlin,Brazil,4.6,$2629,2024-07-26,Quantum Freight
+TRK29176350,Freya Haddad,freya.haddad@example.com,Berlin,Sweden,49.3,$2211,2023-02-04,Redwood Transport
+TRK64125421,Wei Reddy,wei.reddy@example.com,Osaka,France,352.6,$2732,2024-01-02,Redwood Transport
+TRK69535603,Omar Bauer,omar.bauer@example.com,Lyon,Nigeria,277.9,$2772,2024-09-24,Atlas Cargo
+TRK86934041,Omar Haddad,omar.haddad@example.com,Malmö,USA,137.8,$475,2024-08-12,Redwood Transport
+TRK29425309,Priya Khan,priya.khan@example.com,Mumbai,Germany,132.0,$1212,2024-09-19,Atlas Cargo
+TRK84918926,Leila Khan,leila.khan@example.com,Austin,Spain,401.6,$1979,2024-08-17,Quantum Freight
+TRK43174294,Omar Moreno,omar.moreno@example.com,Toronto,France,43.7,$1653,2024-06-23,Atlas Cargo
+TRK36405276,Mei Kovac,mei.kovac@example.com,Austin,Spain,422.9,$3148,2024-06-09,Redwood Transport
+TRK72576762,Wei Okoro,wei.okoro@example.com,Toronto,Japan,13.5,$475,2024-03-09,Redwood Transport
+TRK49065852,Grace Costa,grace.costa@example.com,Lagos,Germany,241.9,$335,2023-06-15,Quantum Freight
+TRK25195370,Yuki Nguyen,yuki.nguyen@example.com,Lagos,Nigeria,188.0,$1172,2024-02-14,Blue Harbor Logistics
+TRK80277515,Wei Okoro,wei.okoro@example.com,Madrid,Brazil,310.0,$642,2024-05-16,Atlas Cargo
+TRK69885791,Freya Reddy,freya.reddy@example.com,Madrid,Spain,448.6,$1654,2023-02-25,Blue Harbor Logistics
+TRK87677936,Wei Haddad,wei.haddad@example.com,Osaka,Brazil,118.1,$3169,2023-12-07,Blue Harbor Logistics
+TRK26524633,Sven Reddy,sven.reddy@example.com,Toronto,Brazil,133.0,$861,2023-01-19,Atlas Cargo

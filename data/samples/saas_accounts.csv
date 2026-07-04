@@ -1,0 +1,35 @@
+account_ref,organisation,billing_email,mrr,plan_tier,signed_up_on,seats,country,region
+ACC-53166,Cobalt Health,billing@cobalt.com,10663,team,2021-08-05,353,Nigeria,São Paulo
+ACC-80647,Sunrise Textiles,billing@sunrise.com,5771,enterprise,2022-02-15,338,Brazil,Toronto
+ACC-70810,Vertex Robotics,billing@vertex.com,8435,enterprise,2022-01-10,285,Brazil,Austin
+ACC-73285,Vertex Robotics,billing@vertex.com,6169,team,2022-09-17,24,USA,Madrid
+ACC-89187,Vertex Robotics,billing@vertex.com,977,free,2020-06-27,278,Canada,Osaka
+ACC-55486,Northwind Traders,billing@northwind.com,4315,enterprise,2022-04-17,398,USA,Osaka
+ACC-18137,Northwind Traders,billing@northwind.com,8165,team,2024-11-17,270,Germany,Mumbai
+ACC-53094,Cobalt Health,billing@cobalt.com,2273,free,2024-11-21,37,Germany,Austin
+ACC-83238,Northwind Traders,billing@northwind.com,11072,enterprise,2022-08-25,72,Spain,Lyon
+ACC-47642,Acme Analytics,billing@acme.com,4229,pro,2021-03-05,333,Spain,Berlin
+ACC-12294,Northwind Traders,billing@northwind.com,8142,enterprise,2021-03-09,217,Japan,Berlin
+ACC-29743,Northwind Traders,billing@northwind.com,5792,team,2022-09-05,185,Japan,Toronto
+ACC-75841,Sunrise Textiles,billing@sunrise.com,8727,free,2024-01-22,283,India,Osaka
+ACC-49485,Vertex Robotics,billing@vertex.com,6221,pro,2024-02-15,319,France,Lagos
+ACC-65082,Acme Analytics,billing@acme.com,1724,team,2024-12-20,70,Germany,Mumbai
+ACC-79193,Northwind Traders,billing@northwind.com,4146,enterprise,2022-09-07,196,Canada,Berlin
+ACC-94148,Acme Analytics,billing@acme.com,1533,enterprise,2023-07-09,215,Brazil,Austin
+ACC-33327,Sunrise Textiles,billing@sunrise.com,2651,team,2022-04-17,263,France,Austin
+ACC-23536,Sunrise Textiles,billing@sunrise.com,1855,team,2023-06-13,157,Japan,Toronto
+ACC-48396,Sunrise Textiles,billing@sunrise.com,4318,pro,2021-01-23,328,Canada,Austin
+ACC-12548,Acme Analytics,billing@acme.com,4363,team,2023-03-09,181,Sweden,Berlin
+ACC-14472,Acme Analytics,billing@acme.com,9253,enterprise,2022-05-14,297,USA,Austin
+ACC-89897,Vertex Robotics,billing@vertex.com,11018,free,2021-03-17,222,Brazil,Toronto
+ACC-87735,Northwind Traders,billing@northwind.com,8341,pro,2020-11-26,172,Japan,Lyon
+ACC-93648,Northwind Traders,billing@northwind.com,10750,enterprise,2023-08-25,25,Germany,Berlin
+ACC-53837,Acme Analytics,billing@acme.com,11622,team,2024-05-27,236,Germany,Madrid
+ACC-95571,Sunrise Textiles,billing@sunrise.com,10655,free,2022-03-12,258,Canada,Malmö
+ACC-15754,Acme Analytics,billing@acme.com,324,enterprise,2024-09-10,7,Canada,Berlin
+ACC-58749,Cobalt Health,billing@cobalt.com,11534,pro,2021-06-22,77,Canada,Toronto
+ACC-22398,Cobalt Health,billing@cobalt.com,8842,pro,2020-05-10,87,Brazil,Toronto
+ACC-69879,Acme Analytics,billing@acme.com,11456,free,2021-04-23,37,Nigeria,Toronto
+ACC-95820,Cobalt Health,billing@cobalt.com,7587,enterprise,2022-04-19,376,India,Lyon
+ACC-86467,Sunrise Textiles,billing@sunrise.com,10527,free,2021-05-23,183,Nigeria,Osaka
+ACC-49184,Northwind Traders,billing@northwind.com,4760,enterprise,2020-03-10,292,USA,São Paulo
