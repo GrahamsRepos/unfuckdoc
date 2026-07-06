@@ -40,8 +40,12 @@ class Consolidator @Inject constructor() {
             val kind = if (kinds.all { it == "free_text" }) "free_text"
                        else kinds.firstOrNull { it != "free_text" } ?: kinds.first()
             val (labels, style0, hasStem) = qualifiers(cols.map { it.name })
-            var card = decideCardinality(cols.map { it.name }, rows, kind, n)
-            if (card == "array" && !hasStem) card = "scalar"     // synonyms, not slots -> coalesce
+            val sig = cardSignal(cols.map { it.name }, rows, kind, n)
+            var card = sig.cardinality
+            // Coalesce synonyms (no shared name stem) to scalar ONLY when they don't strongly
+            // co-occupy. Strong co-occupancy = real multi-value slots (Mobile/Work/Home Phone all
+            // map to `phone`) -> keep as an array even without a shared stem.
+            if (card == "array" && !hasStem && sig.coOccupancy < 0.5) card = "scalar"
             shapes[canon] = Shape(card, if (card == "array") style0 else "single", labels, kind, cols.first().osType, cols)
         }
 
@@ -100,14 +104,19 @@ class Consolidator @Inject constructor() {
         return lo.substring(0, i)
     }
 
-    private fun decideCardinality(cols: List<String>, rows: List<Map<String, String?>>, kind: String, n: Int): String {
-        if (cols.size == 1 || kind == "free_text") return "scalar"
+    private data class CardSignal(val cardinality: String, val coOccupancy: Double)
+
+    /** Decide scalar vs array from fill co-occupancy: `coOccupancy` = fraction of rows where >=2 of
+     *  the columns are populated (real multi-value slots), and array requires those to also differ. */
+    private fun cardSignal(cols: List<String>, rows: List<Map<String, String?>>, kind: String, n: Int): CardSignal {
+        if (cols.size == 1 || kind == "free_text") return CardSignal("scalar", 0.0)
         var concurrent = 0; var distinct = 0
         for (row in rows) {
             val vals = cols.mapNotNull { row[it]?.trim()?.takeIf { s -> s.isNotEmpty() } }
             if (vals.size >= 2) { concurrent++; if (vals.toSet().size >= 2) distinct++ }
         }
-        if (n == 0 || concurrent.toDouble() / n < 0.02) return "scalar"
-        return if (distinct.toDouble() / maxOf(concurrent, 1) >= 0.5) "array" else "scalar"
+        val co = if (n == 0) 0.0 else concurrent.toDouble() / n
+        if (co < 0.02) return CardSignal("scalar", co)
+        return CardSignal(if (distinct.toDouble() / maxOf(concurrent, 1) >= 0.5) "array" else "scalar", co)
     }
 }
