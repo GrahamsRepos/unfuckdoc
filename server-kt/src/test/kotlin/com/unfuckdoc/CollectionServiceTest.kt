@@ -166,6 +166,37 @@ class CollectionServiceTest {
         assertEquals(2, res.total, "both records list wine among their interests")
     }
 
+    @Test
+    fun `same-key duplicates dedupe when exact, else collect differing values and flag the conflict`() {
+        val service = CollectionService(
+            Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
+            Consolidator(),
+            unavailableOpenSearch(),
+        )
+        service.create("dup", "email")
+        service.add(
+            "dup", "d.csv",
+            listOf("email", "company"),
+            listOf(
+                mapOf("email" to "a@example.com", "company" to "Acme"),        // conflicting pair ->
+                mapOf("email" to "a@example.com", "company" to "Acme Corp"),    //   array + flag
+                mapOf("email" to "b@example.com", "company" to "Blue"),         // exact duplicate ->
+                mapOf("email" to "b@example.com", "company" to "Blue"),         //   deduped, no flag
+            ),
+        )
+
+        val detail = service.detail("dup")!!
+        assertEquals(2, detail.nRecords)   // two entities
+        val company = detail.schema.first { it.field == "company" }
+        assertEquals(1, company.conflicts)  // only a@example.com disagreed
+
+        // a@ keeps both values; b@ stays a single scalar
+        val a = service.search("dup", "", "", emptyList(), listOf(FieldFilter("email", "a@example.com")), 5, 1)!!
+        assertEquals("Acme Acme Corp", a.results.single()["company"])
+        val b = service.search("dup", "", "", emptyList(), listOf(FieldFilter("email", "b@example.com")), 5, 1)!!
+        assertEquals("Blue", b.results.single()["company"])
+    }
+
     private fun unavailableOpenSearch(): OpenSearchService {
         val opensearch = mockk<OpenSearchService>()
         every { opensearch.available() } returns false

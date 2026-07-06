@@ -16,6 +16,11 @@ export function CollectionSchema({ detail }: { detail: CollectionDetail }) {
                 <td>
                   <span className="canon">{s.field}</span>
                   {s.conflict && <span className="no"> ⚠ type conflict</span>}
+                  {s.conflicts > 0 && (
+                    <span className="no" title="entities where same-key duplicates disagreed — differing values kept as a list">
+                      {" "}⚠ {s.conflicts} value conflict{s.conflicts === 1 ? "" : "s"}
+                    </span>
+                  )}
                 </td>
                 <td><KindBadge kind={s.kind} label={s.os_type ?? s.kind} /></td>
                 <td>

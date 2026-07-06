@@ -25,6 +25,7 @@ class CollectionService @Inject constructor(
     private class Agg(var osType: String?, var kind: String, var cardinality: String) {
         val sources = mutableListOf<String>()
         var count = 0
+        var valueConflicts = 0   // entities where same-key duplicates disagreed on this scalar field
         val types = mutableSetOf<String?>()
     }
     private class RawFile(val name: String, val headers: List<String>, val rows: List<Map<String, String?>>)
@@ -143,7 +144,11 @@ class CollectionService @Inject constructor(
                 if (kv.isNotEmpty()) c.keyIndex[kv] = c.entities.size - 1
             }
         }
-        c.schema.forEach { (canon, agg) -> agg.count = c.entities.count { it[canon] != null } }
+        c.schema.forEach { (canon, agg) ->
+            agg.count = c.entities.count { it[canon] != null }
+            // a scalar field holding a list = same-key duplicates disagreed and were collected -> flag it
+            agg.valueConflicts = if (agg.cardinality == "array") 0 else c.entities.count { it[canon] is List<*> }
+        }
         c.files.add(CollectionFileDto(filename, result.nRows, mapping))
         return mapping
     }
@@ -279,7 +284,7 @@ class CollectionService @Inject constructor(
             .map { (field, a) ->
                 // a.osType already carries a custom canonical's declared type (applied at ingest)
                 SchemaFieldDto(field, a.osType, a.kind, a.cardinality, a.sources.map { short(it) },
-                    a.sources.size, a.count, a.types.size > 1, facetValues(c, field, a.osType))
+                    a.sources.size, a.count, a.types.size > 1, facetValues(c, field, a.osType), a.valueConflicts)
             }
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
         val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, n in c.customArrays, c.schema.containsKey(n)) }
@@ -327,8 +332,21 @@ class CollectionService @Inject constructor(
     private fun mergeValue(c: Collection, field: String, existing: Any?, incoming: Any?): Any? {
         if (existing == null) return normalizeValue(c, field, incoming)
         if (incoming == null) return normalizeValue(c, field, existing)
-        if (c.schema[field]?.cardinality != "array") return existing
-        return mergeTagged(toTagged(existing), toTagged(incoming))
+        if (c.schema[field]?.cardinality == "array") return mergeTagged(toTagged(existing), toTagged(incoming))
+        // scalar, same key: if the values agree keep one (exact dedupe); if they differ, collect the
+        // distinct values into a list instead of dropping the loser. Conflicts are flagged in detail().
+        val vals = LinkedHashSet<Any?>()
+        addScalars(vals, existing); addScalars(vals, incoming)
+        return if (vals.size <= 1) vals.firstOrNull() else vals.toList()
+    }
+
+    private fun addScalars(into: MutableSet<Any?>, v: Any?) {
+        when (v) {
+            null -> {}
+            is List<*> -> v.forEach { addScalars(into, it) }
+            is Map<*, *> -> v["value"]?.let { into.add(it) }
+            else -> into.add(v)
+        }
     }
 
     private fun normalizeValue(c: Collection, field: String, value: Any?): Any? =
