@@ -50,6 +50,8 @@ export const api = {
   },
   setMapping: (name: string, column: string, canonical: string) =>
     postJson<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}/mapping`, { column, canonical }),
+  setCollectionKey: (name: string, key: string) =>
+    postJson<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}/key`, { key }),
   addSampleToCollection: (name: string, sample: string) =>
     postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(
       `/api/collections/${encodeURIComponent(name)}/add`, { sample }),

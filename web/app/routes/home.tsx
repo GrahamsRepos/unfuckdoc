@@ -23,7 +23,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   const [overview, samples] = await Promise.all([api.overview(), api.samples()]);
 
   // Search state lives in the URL, so results are server-rendered.
-  const hasQuery = p.get("q") || p.get("tag") || p.getAll("f").length > 0;
+  const hasQuery = p.has("q") || p.has("tag") || p.getAll("f").length > 0;
+  const page = Math.max(1, Number.parseInt(p.get("page") ?? "1", 10) || 1);
+  const size = Math.max(1, Number.parseInt(p.get("size") ?? "12", 10) || 12);
+  const showAllColumns = p.get("cols") === "all";
   const filters = p.getAll("f").map((s) => {
     const i = s.indexOf(":");
     return { field: s.slice(0, i), value: s.slice(i + 1) };
@@ -35,7 +38,9 @@ export async function loader({ request }: Route.LoaderArgs) {
         field: p.get("field") ?? (overview.fuzzy[0] ?? undefined),
         tag: p.get("tag") ?? "",
         filters,
-        size: 12,
+        size,
+        page,
+        show_all_columns: showAllColumns,
       })
     : null;
 

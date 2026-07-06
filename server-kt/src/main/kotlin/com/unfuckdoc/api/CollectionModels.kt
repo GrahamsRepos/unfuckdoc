@@ -27,11 +27,15 @@ data class CollectionFileDto(val name: String, val rows: Int, val mapping: List<
 data class Segment(val name: String, val filters: List<FieldFilter>, val count: Int = 0)
 
 @Serializable
+data class CollectionTag(val tag: String, val count: Int)
+
+@Serializable
 data class CollectionDetail(
     val name: String, val index: String, val nRecords: Int,
     val keyField: String, val rawRecords: Int, val merged: Int,
     val schema: List<SchemaFieldDto>, val files: List<CollectionFileDto>,
     val segments: List<Segment>, val opensearch: OsStatus,
+    val tags: List<CollectionTag> = emptyList(),
 )
 
 @Serializable
@@ -42,6 +46,7 @@ data class CollectionAddResponse(
 
 @Serializable
 data class CollectionSearchResponse(
-    val display: List<String>, val count: Int, val results: List<Map<String, String>>,
+    val display: List<String>, val count: Int, val total: Int, val page: Int, val pageSize: Int,
+    val results: List<Map<String, String>>,
     val dsl: JsonElement, val index: String, val error: String? = null,
 )

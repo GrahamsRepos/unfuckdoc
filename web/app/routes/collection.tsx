@@ -24,11 +24,21 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const p = url.searchParams;
   const [detail, samples] = await Promise.all([api.collection(params.name), api.samples()]);
   const filters = parseFilters(p);
+  const sourceFiles = p.getAll("source_file");
+  const page = Math.max(1, Number.parseInt(p.get("page") ?? "1", 10) || 1);
+  const size = Math.max(1, Number.parseInt(p.get("size") ?? "30", 10) || 30);
   // empty search is match-any: browse the whole collection, narrowed by any selected tag/segment/filter
   const search = detail.n_records > 0
-    ? await api.searchCollection(params.name, { q: p.get("q") ?? "", filters, size: 30 })
+    ? await api.searchCollection(params.name, {
+      q: p.get("q") ?? "",
+      tag: p.get("tag") ?? "",
+      source_files: sourceFiles,
+      filters,
+      size,
+      page,
+    })
     : null;
-  return { detail, samples: samples.samples, search, filters };
+  return { detail, samples: samples.samples, search, filters, sourceFiles };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -50,6 +60,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     await api.setMapping(params.name, String(form.get("column")), String(form.get("canonical") ?? ""));
     return redirect(base);
   }
+  if (intent === "set-key") {
+    await api.setCollectionKey(params.name, String(form.get("key") ?? "email"));
+    return redirect(base);
+  }
 
   // default: dump a file into the collection
   const file = form.get("file");
@@ -65,11 +79,15 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Collection({ loaderData }: Route.ComponentProps) {
-  const { detail, samples, search, filters } = loaderData;
+  const { detail, samples, search, filters, sourceFiles } = loaderData;
   const os = detail.opensearch;
   const submit = useSubmit();
   const fileRef = useRef<HTMLInputElement>(null);
   const dupRate = detail.raw_records > 0 ? Math.round((detail.merged / detail.raw_records) * 100) : 0;
+  const keyOptions = Array.from(new Set([
+    detail.key_field, "email", "company", "account", "identifier", "phone", "full_name",
+    ...detail.schema.map((s) => s.field),
+  ])).filter(Boolean).sort();
 
   return (
     <>
@@ -113,9 +131,26 @@ export default function Collection({ loaderData }: Route.ComponentProps) {
               }} />
           </label>
         </div>
+
+        <form method="post" className="fieldbar" style={{ marginTop: 10, gap: 8 }}>
+          <input type="hidden" name="intent" value="set-key" />
+          <span className="mut">Associate records by</span>
+          <select name="key" defaultValue={detail.key_field} title="canonical field used to merge records across source files">
+            {keyOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+          <button className="btn ghost" type="submit">rebuild merge</button>
+        </form>
       </section>
 
       <Segments detail={detail} activeFilters={filters} />
+      {detail.tags.length > 0 && (
+        <section className="card">
+          <h3>Extracted tags <span className="mut">— across all source files</span></h3>
+          <div className="chips" style={{ marginTop: 10 }}>
+            {detail.tags.slice(0, 30).map((t) => <span key={t.tag} className="kw">{t.tag} · {t.count}</span>)}
+          </div>
+        </section>
+      )}
       <MergeGraph detail={detail} />
       <CollectionSchema detail={detail} />
       <FileMapping detail={detail} />

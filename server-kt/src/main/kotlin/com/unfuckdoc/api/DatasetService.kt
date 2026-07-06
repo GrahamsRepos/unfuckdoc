@@ -20,7 +20,11 @@ class DatasetService @Inject constructor(
     private val indexBuilder: IndexBuilder,
     private val opensearch: OpenSearchService,
 ) {
-    private data class Loaded(val overview: Overview, val docs: List<Map<String, Any?>>)
+    private data class Loaded(
+        val overview: Overview,
+        val docs: List<Map<String, Any?>>,
+        val fuzzy: List<String>,
+    )
 
     @Volatile private var current: Loaded? = null
     private val registry = LinkedHashMap<String, LinkedHashMap<String, RegistrySource>>()
@@ -40,6 +44,8 @@ class DatasetService @Inject constructor(
     fun load(filename: String, headers: List<String>, rows: List<Map<String, String?>>): Overview {
         val result = pipeline.process(filename, headers, rows)
         val cons = consolidator.consolidate(rows, result.columns)
+        val fuzzy = cons.unified.filter { it.kind == "free_text" }.map { it.canonical }
+        val docs = enrichKeywords(cons.docs, fuzzy)
 
         // best-effort index the scalar docs into OpenSearch (matches Python indexing on load)
         val os = runCatching {
@@ -54,42 +60,73 @@ class DatasetService @Inject constructor(
 
         updateRegistry(filename, result.columns)
 
-        val facets = buildFacets(cons.unified, cons.docs)
+        val tagCounts = buildTagCounts(docs, fuzzy)
+        val facets = buildFacets(cons.unified, docs)
         val display = displayColumns(cons.unified)
         val overview = Overview(
             loaded = true, filename = filename, nRows = result.nRows, nCols = result.nCols,
             llmCalls = result.llmCalls, coerced = result.coerced, quarantine = result.quarantine,
             columns = result.columns, kindCounts = result.kindCounts, mergeGroups = result.mergeGroups,
-            fuzzy = emptyList(),                       // no embeddings in this backend -> keyword search only
-            tags = emptyMap(), allTags = emptyList(),  // no keyword extraction
+            fuzzy = fuzzy,
+            tags = tagCounts.mapValues { (_, counts) ->
+                counts.entries.sortedByDescending { it.value }.take(25).map { Dsl.anyToJson(listOf(it.key, it.value)) }
+            },
+            allTags = tagCounts.values
+                .fold(LinkedHashMap<String, Int>()) { acc, counts ->
+                    counts.forEach { (k, v) -> acc.merge(k, v, Int::plus) }
+                    acc
+                }
+                .entries.sortedByDescending { it.value }.take(40).map { it.key },
             unified = cons.unified, facets = facets, mapping = buildMapping(cons.unified),
             embedder = null, vecDim = null,
-            sampleDocs = cons.docs.take(5).map { Dsl.anyToJson(it) },
+            sampleDocs = docs.take(5).map { Dsl.anyToJson(it) },
             displayColumns = display, registry = registryView(), opensearch = os,
         )
-        current = Loaded(overview, cons.docs)
+        current = Loaded(overview, docs, fuzzy)
         return overview
     }
 
-    fun search(mode: String, field: String?, q: String, tag: String, filters: List<FieldFilter>, size: Int): SearchResponse {
-        val loaded = current ?: return SearchResponse(mode, field, tag, filters, 0, emptyList(), emptyList(),
-            Dsl.display(Dsl.query(q, emptyMap(), listOf("*")), size), error = "upload a CSV first")
+    fun search(
+        mode: String,
+        field: String?,
+        q: String,
+        tag: String,
+        filters: List<FieldFilter>,
+        size: Int,
+        page: Int,
+        showAllColumns: Boolean = false,
+    ): SearchResponse {
+        val safeSize = size.coerceAtLeast(1)
+        val safePage = page.coerceAtLeast(1)
+        val offset = ((safePage - 1).toLong() * safeSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        val loaded = current ?: return SearchResponse(mode, field, tag, filters, 0, 0, safePage, safeSize, emptyList(), emptyList(),
+            Dsl.display(Dsl.query(q, emptyMap(), listOf("*")), safeSize), error = "upload a CSV first")
         val dtypes = loaded.overview.unified.associate { it.canonical to dtypeOf(it.osType) }
-        val display = loaded.overview.displayColumns
+        val display = if (showAllColumns) displayColumns(loaded.overview.unified, true) else loaded.overview.displayColumns
         val ql = q.lowercase()
+        val tagValue = tag.trim()
 
         val out = ArrayList<SearchResult>()
+        var total = 0
         for (doc in loaded.docs) {
+            if (tagValue.isNotEmpty() && !hasExactTag(doc, loaded.fuzzy, tagValue)) continue
             if (filters.any { f -> !filterMatch(fieldValues(doc[f.field]), f.value, dtypes[f.field]) }) continue
-            if (ql.isNotEmpty() && ql !in blob(doc)) continue
-            val row = buildJsonObject { display.forEach { c -> if (doc.containsKey(c)) put(c, Dsl.anyToJson(doc[c])) } }
-            out.add(SearchResult(JsonPrimitive("●"), row))
-            if (out.size >= size) break
+            if (ql.isNotEmpty()) {
+                val haystack = if (mode == "keyword") keywordBlob(doc, loaded.fuzzy) else blob(doc)
+                if (ql !in haystack) continue
+            }
+            if (total >= offset && out.size < safeSize) {
+                val row = buildJsonObject { display.forEach { c -> if (doc.containsKey(c)) put(c, Dsl.anyToJson(doc[c])) } }
+                val score = if (ql.isBlank()) JsonPrimitive("●") else JsonPrimitive(1)
+                val highlight = tagValue.ifBlank { if (mode == "keyword") q.trim() else "" }.ifBlank { null }
+                out.add(SearchResult(score, row, primaryKeywords(doc, field, loaded.fuzzy, highlight)))
+            }
+            total++
         }
         val filterMap = filters.associate { it.field to it.value }
-        val query = Dsl.query(q.ifBlank { null }, filterMap, listOf("*"))
-        return SearchResponse(mode, field, tag, filters, out.size, display, out,
-            Dsl.display(query, size), index = loaded.overview.opensearch.index)
+        val query = Dsl.query(q.ifBlank { null }, filterMap, listOf("*"), tagValue.ifBlank { null }, loaded.fuzzy.firstOrNull())
+        return SearchResponse(mode, field, tag, filters, out.size, total, safePage, safeSize, display, out,
+            Dsl.display(query, safeSize), index = loaded.overview.opensearch.index)
     }
 
     // ---- overview building blocks ----
@@ -124,9 +161,13 @@ class DatasetService @Inject constructor(
         }
     }
 
-    private fun displayColumns(unified: List<com.unfuckdoc.domain.Unified>): List<String> {
+    private fun displayColumns(unified: List<com.unfuckdoc.domain.Unified>, full: Boolean = false): List<String> {
         val present = unified.filter { it.kind != "free_text" }.map { it.canonical }.toSet()
         val cols = displayOrder.filter { it in present }.toMutableList()
+        if (full) {
+            cols.addAll(unified.filter { it.kind != "free_text" && it.canonical !in cols }.map { it.canonical }.sorted())
+            return cols
+        }
         unified.filter { it.kind != "free_text" && it.canonical !in cols }.forEach { if (cols.size < 8) cols.add(it.canonical) }
         return cols.take(8)
     }
@@ -144,6 +185,61 @@ class DatasetService @Inject constructor(
     }.sortedWith(compareBy({ !it.unified }, { -it.nFiles }, { -it.nColumns }, { it.canonical }))
 
     // ---- helpers ----
+    private val wordRe = Regex("[A-Za-z][A-Za-z0-9'-]{2,}")
+    private val stop = setOf(
+        "the", "and", "for", "with", "from", "that", "this", "they", "them", "their", "will", "would",
+        "about", "into", "onto", "than", "then", "have", "has", "had", "needs", "wants", "asked",
+        "prefers", "main", "more", "less", "very", "also", "but", "not", "are", "was", "were",
+    )
+
+    private fun enrichKeywords(docs: List<Map<String, Any?>>, fuzzy: List<String>): List<Map<String, Any?>> =
+        if (fuzzy.isEmpty()) docs else docs.map { doc ->
+            val out = LinkedHashMap<String, Any?>(doc)
+            fuzzy.forEach { f ->
+                out["${f}_keywords"] = extractKeywords(flattenText(doc[f])).take(8)
+            }
+            out
+        }
+
+    private fun extractKeywords(text: String): List<String> {
+        val words = wordRe.findAll(text.lowercase())
+            .map { it.value.trim('\'', '-') }
+            .filter { it.length >= 3 && it !in stop }
+            .toList()
+        val counts = LinkedHashMap<String, Int>()
+        words.forEach { counts.merge(it, 1, Int::plus) }
+        words.windowed(2).forEach { pair ->
+            if (pair.all { it !in stop }) counts.merge(pair.joinToString(" "), 2, Int::plus)
+        }
+        return counts.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .map { it.key }
+    }
+
+    private fun buildTagCounts(docs: List<Map<String, Any?>>, fuzzy: List<String>): Map<String, LinkedHashMap<String, Int>> =
+        fuzzy.associateWith { f ->
+            val counts = LinkedHashMap<String, Int>()
+            docs.forEach { d -> (d["${f}_keywords"] as? List<*>)?.forEach { counts.merge(it.toString(), 1, Int::plus) } }
+            counts
+        }
+
+    private fun hasExactTag(doc: Map<String, Any?>, fuzzy: List<String>, tag: String): Boolean =
+        fuzzy.any { f -> (doc["${f}_keywords"] as? List<*>)?.any { it.toString() == tag } == true }
+
+    private fun keywordBlob(doc: Map<String, Any?>, fuzzy: List<String>): String =
+        fuzzy.joinToString(" ") { f ->
+            (doc["${f}_keywords"] as? List<*>)?.joinToString(" ") { it.toString() } ?: ""
+        }.lowercase()
+
+    private fun primaryKeywords(doc: Map<String, Any?>, field: String?, fuzzy: List<String>, highlight: String?): List<String> {
+        val f = field?.takeIf { it.isNotBlank() } ?: fuzzy.firstOrNull() ?: return emptyList()
+        val keywords = (doc["${f}_keywords"] as? List<*>)?.map { it.toString() } ?: emptyList()
+        val matched = highlight?.let { h -> keywords.firstOrNull { it == h || h in it || it in h } }
+        return if (matched != null)
+            (listOf(matched) + keywords.filterNot { it == matched }).take(5)
+        else
+            keywords.take(5)
+    }
+
     private fun dtypeOf(osType: String?): String? = when (osType) {
         "double", "long", "integer", "float" -> "num"; "date" -> "date"; else -> null
     }

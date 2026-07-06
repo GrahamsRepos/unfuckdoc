@@ -59,6 +59,7 @@ data class SearchResult(val score: JsonElement, val row: JsonObject, val keyword
 @Serializable
 data class SearchResponse(
     val mode: String, val field: String?, val tag: String, val filters: List<FieldFilter>,
-    val count: Int, val displayColumns: List<String>, val results: List<SearchResult>,
+    val count: Int, val total: Int, val page: Int, val pageSize: Int,
+    val displayColumns: List<String>, val results: List<SearchResult>,
     val dsl: JsonElement, val index: String? = null, val error: String? = null,
 )

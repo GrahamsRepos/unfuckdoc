@@ -34,7 +34,7 @@ export function Dsl({ dsl, index }: { dsl: unknown; index?: string }) {
   return (
     <details className="dslbox" open>
       <summary>
-        Equivalent OpenSearch query{" "}
+        Generated query{" "}
         <span className="mut">— {target} · (search runs in-memory; shown for reference)</span>
       </summary>
       <pre className="dsl">{JSON.stringify(dsl, null, 2)}</pre>

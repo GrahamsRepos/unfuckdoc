@@ -23,18 +23,27 @@ import io.ktor.utils.io.readRemaining
 import jakarta.inject.Inject
 import kotlinx.io.readByteArray
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import java.io.File
 
 @Serializable data class LoadRequest(val name: String)
 @Serializable data class SearchRequest(
     val q: String = "", val mode: String = "keyword", val field: String? = null,
     val tag: String = "", val filters: List<FieldFilter> = emptyList(), val size: Int = 12,
+    val page: Int = 1,
+    val showAllColumns: Boolean = false,
 )
 @Serializable data class CreateCollectionRequest(val name: String, val key: String = "email")
 @Serializable data class AddSampleRequest(val sample: String = "")
-@Serializable data class CollectionSearchRequest(val q: String = "", val filters: List<FieldFilter> = emptyList(), val size: Int = 30)
+@Serializable data class CollectionSearchRequest(
+    val q: String = "", val tag: String = "",
+    @SerialName("source_files") val sourceFiles: List<String> = emptyList(),
+    val filters: List<FieldFilter> = emptyList(), val size: Int = 30,
+    val page: Int = 1,
+)
 @Serializable data class SegmentRequest(val name: String, val filters: List<FieldFilter> = emptyList())
 @Serializable data class MappingOverrideRequest(val column: String, val canonical: String = "")
+@Serializable data class CollectionKeyRequest(val key: String)
 @Serializable data class MatchCandidatesRequest(val a: String, val b: String)
 @Serializable data class MatchRequest(val a: String, val b: String, val key: String? = null, val threshold: Double = 0.85)
 
@@ -102,7 +111,7 @@ class ApiController @Inject constructor(
 
         post("/api/search") {
             val req = call.receive<SearchRequest>()
-            call.respond(dataset.search(req.mode, req.field, req.q, req.tag, req.filters, req.size))
+            call.respond(dataset.search(req.mode, req.field, req.q, req.tag, req.filters, req.size, req.page, req.showAllColumns))
         }
 
         // ---- collections ----
@@ -140,7 +149,7 @@ class ApiController @Inject constructor(
 
         post("/api/collections/{name}/search") {
             val req = call.receive<CollectionSearchRequest>()
-            call.respond(collections.search(call.parameters["name"]!!, req.q, req.filters, req.size)
+            call.respond(collections.search(call.parameters["name"]!!, req.q, req.tag, req.sourceFiles, req.filters, req.size, req.page)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
         }
 
@@ -153,6 +162,12 @@ class ApiController @Inject constructor(
         post("/api/collections/{name}/mapping") {
             val req = call.receive<MappingOverrideRequest>()
             call.respond(collections.setMapping(call.parameters["name"]!!, req.column, req.canonical)
+                ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
+        }
+
+        post("/api/collections/{name}/key") {
+            val req = call.receive<CollectionKeyRequest>()
+            call.respond(collections.setKey(call.parameters["name"]!!, req.key)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
         }
 

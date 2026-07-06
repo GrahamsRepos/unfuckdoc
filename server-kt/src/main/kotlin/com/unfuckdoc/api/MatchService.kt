@@ -2,9 +2,14 @@ package com.unfuckdoc.api
 
 import com.unfuckdoc.domain.Consolidator
 import com.unfuckdoc.domain.CsvReader
+import com.unfuckdoc.domain.Dsl
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.domain.Unified
 import jakarta.inject.Inject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import java.io.File
 import kotlin.math.max
 
@@ -63,8 +68,19 @@ class MatchService @Inject constructor(
         }
         pairs.sortWith(compareBy({ it.sim >= 1.0 }, { -it.sim }))   // interesting fuzzy matches first
         val keyedA = ra.docs.count { normKey(it[k], k).isNotEmpty() }
+        val dsl = buildJsonObject {
+            put("match", buildJsonObject {
+                put("dataset_a", a)
+                put("dataset_b", b)
+                put("key", k)
+                put("threshold", threshold)
+                put("blocking", "first-character normalized key")
+                putJsonArray("display_a") { dispA.forEach { add(it) } }
+                putJsonArray("display_b") { dispB.forEach { add(it) } }
+            })
+        }
         return MatchResult(k, threshold, ra.rows, rb.rows, keyedA, matched, exact,
-            keyedA - matched, rb.rows - matchedB.size, dispA, dispB, pairs.take(25))
+            keyedA - matched, rb.rows - matchedB.size, dispA, dispB, pairs.take(25), dsl)
     }
 
     // ---- internals ----
@@ -117,5 +133,5 @@ class MatchService @Inject constructor(
     }
 
     private fun round3(x: Double) = Math.round(x * 1000) / 1000.0
-    private fun err(msg: String) = MatchResult("", 0.0, 0, 0, 0, 0, 0, 0, 0, emptyList(), emptyList(), emptyList(), msg)
+    private fun err(msg: String) = MatchResult("", 0.0, 0, 0, 0, 0, 0, 0, 0, emptyList(), emptyList(), emptyList(), null, msg)
 }

@@ -108,6 +108,9 @@ export interface SearchResponse {
   tag: string;
   filters: FieldFilter[];
   count: number;
+  total: number;
+  page: number;
+  page_size: number;
   display_columns: string[];
   results: SearchResult[];
   dsl: unknown;
@@ -127,13 +130,16 @@ export interface SchemaField {
 export interface FileMappingEntry { column: string; canonical: string; method: string; }
 export interface CollectionFile { name: string; rows: number; mapping: FileMappingEntry[]; }
 export interface Segment { name: string; filters: FieldFilter[]; count: number; }
+export interface CollectionTag { tag: string; count: number; }
 export interface CollectionDetail {
   name: string; index: string; n_records: number;
   key_field: string; raw_records: number; merged: number;
   schema: SchemaField[]; files: CollectionFile[]; segments: Segment[]; opensearch: OsStatus;
+  tags: CollectionTag[];
 }
 export interface CollectionSearchResponse {
-  display: string[]; count: number; results: Record<string, string>[];
+  display: string[]; count: number; total: number; page: number; page_size: number;
+  results: Record<string, string>[];
   dsl: unknown; index: string; error?: string;
 }
 
@@ -144,5 +150,5 @@ export interface MatchPair { sim: number; a: Record<string, string>; b: Record<s
 export interface MatchResult {
   key: string; threshold: number; rows_a: number; rows_b: number; keyed_a: number;
   matched: number; exact: number; unmatched_a: number; unmatched_b: number;
-  display_a: string[]; display_b: string[]; pairs: MatchPair[]; error?: string;
+  display_a: string[]; display_b: string[]; pairs: MatchPair[]; dsl?: unknown; error?: string;
 }

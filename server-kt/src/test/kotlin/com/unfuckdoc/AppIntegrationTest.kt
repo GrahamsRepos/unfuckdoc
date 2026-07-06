@@ -75,6 +75,104 @@ class AppIntegrationTest : IntegrationTest() {
     }
 
     @Test
+    fun `load extracts tags from free text fields`() = withApp { client ->
+        val d = obj(loadSample(client, "samples/crm_contacts.csv").bodyAsText())
+        assertTrue(d["all_tags"]!!.jsonArray.isNotEmpty(), "expected extracted tags")
+        assertTrue(d["tags"]!!.jsonObject.isNotEmpty(), "expected tags grouped by free-text field")
+    }
+
+    @Test
+    fun `blank keyword search browses results and still supports exact tag filters`() = withApp { client ->
+        val overview = obj(loadSample(client, "samples/crm_contacts.csv").bodyAsText())
+        val tag = overview["all_tags"]!!.jsonArray.first().jsonPrimitive.content
+
+        val blank = client.post("/api/search") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"mode":"keyword","q":"","size":50}""")
+        }
+        assertTrue(obj(blank.bodyAsText())["count"]!!.jsonPrimitive.int > 0, "expected blank keyword search to return rows")
+
+        val tagged = client.post("/api/search") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"mode":"keyword","q":"","tag":"$tag","size":50}""")
+        }
+        val d = obj(tagged.bodyAsText())
+        assertTrue(d["count"]!!.jsonPrimitive.int > 0, "expected exact tag matches")
+        d["results"]!!.jsonArray.forEach { r ->
+            val keywords = r.jsonObject["keywords"]!!.jsonArray.map { it.jsonPrimitive.content }
+            assertTrue(tag in keywords, "expected result keywords to contain the exact tag")
+        }
+    }
+
+    @Test
+    fun `keyword search targets extracted keywords`() = withApp { client ->
+        val overview = obj(loadSample(client, "samples/crm_contacts.csv").bodyAsText())
+        val tag = overview["all_tags"]!!.jsonArray.first().jsonPrimitive.content
+        val res = client.post("/api/search") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"mode":"keyword","q":"$tag","size":50}""")
+        }
+        val d = obj(res.bodyAsText())
+        assertTrue(d["count"]!!.jsonPrimitive.int > 0, "expected keyword matches")
+        d["results"]!!.jsonArray.forEach { r ->
+            val keywords = r.jsonObject["keywords"]!!.jsonArray.map { it.jsonPrimitive.content }
+            assertTrue(keywords.any { tag in it || it in tag }, "expected keyword result to expose matching tags")
+        }
+    }
+
+    @Test
+    fun `keyword search paginates through the full result set`() = withApp { client ->
+        loadSample(client, "samples/crm_contacts.csv")
+        val page1 = obj(client.post("/api/search") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"mode":"keyword","q":"","size":5,"page":1}""")
+        }.bodyAsText())
+        val page2 = obj(client.post("/api/search") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"mode":"keyword","q":"","size":5,"page":2}""")
+        }.bodyAsText())
+        assertEquals(page1["total"]!!.jsonPrimitive.int, page2["total"]!!.jsonPrimitive.int)
+        assertTrue(page1["results"]!!.jsonArray != page2["results"]!!.jsonArray, "expected different rows on the next page")
+    }
+
+    @Test
+    fun `search can return all canonical columns`() = withApp { client ->
+        loadSample(client, "samples/crm_contacts.csv")
+        val compact = obj(client.post("/api/search") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"q":"retail","mode":"keyword","size":10}""")
+        }.bodyAsText())
+        val full = obj(client.post("/api/search") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"q":"retail","mode":"keyword","size":10,"show_all_columns":true}""")
+        }.bodyAsText())
+        assertTrue(full["display_columns"]!!.jsonArray.size > compact["display_columns"]!!.jsonArray.size)
+        assertTrue(full["display_columns"]!!.jsonArray.contains(compact["display_columns"]!!.jsonArray.first()))
+    }
+
+    @Test
+    fun `collection search accepts multiple source files`() = withApp { client ->
+        client.post("/api/collections") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"name":"accounts","key":"company"}""")
+        }
+        client.post("/api/collections/accounts/add") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"sample":"collections/tagged_contacts_single.csv"}""")
+        }
+        client.post("/api/collections/accounts/add") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"sample":"collections/tagged_contacts_slotted.csv"}""")
+        }
+        val res = client.post("/api/collections/accounts/search") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"source_files":["tagged_contacts_single","tagged_contacts_slotted"],"size":20}""")
+        }
+        val d = obj(res.bodyAsText())
+        assertTrue(d["count"]!!.jsonPrimitive.int > 0)
+    }
+
+    @Test
     fun `schema endpoint returns a JSON Schema for the loaded dataset`() = withApp { client ->
         loadSample(client, "samples/multi_contacts.csv")
         val body = client.get("/api/schema").bodyAsText()

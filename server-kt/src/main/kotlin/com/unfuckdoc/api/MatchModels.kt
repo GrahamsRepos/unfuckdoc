@@ -1,6 +1,7 @@
 package com.unfuckdoc.api
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class MatchKey(
@@ -20,5 +21,6 @@ data class MatchResult(
     val rowsA: Int, val rowsB: Int, val keyedA: Int,
     val matched: Int, val exact: Int, val unmatchedA: Int, val unmatchedB: Int,
     val displayA: List<String>, val displayB: List<String>, val pairs: List<MatchPair>,
+    val dsl: JsonElement? = null,
     val error: String? = null,
 )

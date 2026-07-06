@@ -34,9 +34,19 @@ object Dsl {
     }
 
     /** The query body ({"bool":{...}} or {"match_all":{}}) — parsed into a typed Query at query time. */
-    fun query(q: String?, filters: Map<String, String>, textFields: List<String>): JsonObject {
+    fun query(
+        q: String?,
+        filters: Map<String, String>,
+        textFields: List<String>,
+        tag: String? = null,
+        tagField: String? = null,
+        source: String? = null,
+        sourceField: String? = null,
+    ): JsonObject {
         val hasMust = !q.isNullOrBlank()
-        val hasFilter = filters.isNotEmpty()
+        val hasTag = !tag.isNullOrBlank() && !tagField.isNullOrBlank()
+        val hasSource = !source.isNullOrBlank() && !sourceField.isNullOrBlank()
+        val hasFilter = filters.isNotEmpty() || hasTag || hasSource
         if (!hasMust && !hasFilter) return buildJsonObject { putJsonObject("match_all") {} }
         return buildJsonObject {
             putJsonObject("bool") {
@@ -50,6 +60,8 @@ object Dsl {
                 }
                 if (hasFilter) putJsonArray("filter") {
                     filters.forEach { (f, v) -> add(filterClause(f, v)) }
+                    if (hasTag) add(buildJsonObject { putJsonObject("term") { put(tagField!!, tag!!) } })
+                    if (hasSource) add(buildJsonObject { putJsonObject("term") { put(sourceField!!, source!!) } })
                 }
             }
         }

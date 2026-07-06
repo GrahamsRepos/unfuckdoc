@@ -5,6 +5,11 @@ import com.unfuckdoc.domain.Dsl
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.opensearch.OpenSearchService
 import jakarta.inject.Inject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 /**
  * Collections of BUCKETS. A collection has a user-definable unique key (default `email`) that acts
@@ -23,7 +28,7 @@ class CollectionService @Inject constructor(
         val types = mutableSetOf<String?>()
     }
     private class RawFile(val name: String, val headers: List<String>, val rows: List<Map<String, String?>>)
-    private class Collection(val name: String, val index: String, val keyField: String) {
+    private class Collection(val name: String, val index: String, var keyField: String) {
         val rawFiles = mutableListOf<RawFile>()                     // retained so a re-map can rebuild
         val overrides = LinkedHashMap<String, String>()             // raw column name -> forced canonical
         val schema = LinkedHashMap<String, Agg>()
@@ -81,6 +86,16 @@ class CollectionService @Inject constructor(
         return detail(c)
     }
 
+    /** Change the association key used to bucket records across files, then rebuild all entities. */
+    fun setKey(name: String, key: String): CollectionDetail? {
+        val c = collections[name] ?: return null
+        val canonical = key.trim().ifBlank { return detail(c) }
+        c.keyField = canonical
+        rebuild(c)
+        c.opensearch = reindex(c)
+        return detail(c)
+    }
+
     /** Re-run classify -> (override-aware) canonicalize -> merge over every retained file. */
     private fun rebuild(c: Collection) {
         c.schema.clear(); c.files.clear(); c.entities.clear(); c.keyIndex.clear()
@@ -99,6 +114,7 @@ class CollectionService @Inject constructor(
             val agg = c.schema.getOrPut(u.canonical) { Agg(u.osType, u.kind, u.cardinality) }
             if (filename !in agg.sources) agg.sources.add(filename)
             agg.types.add(u.osType)
+            if (u.cardinality == "array") agg.cardinality = "array"
         }
         for (doc in cons.docs) {
             c.rawRecords++
@@ -106,9 +122,12 @@ class CollectionService @Inject constructor(
             val idx = if (kv.isNotEmpty()) c.keyIndex[kv] else null
             if (idx != null) {
                 val e = c.entities[idx]
-                for ((k, v) in doc) if (v != null && e[k] == null) e[k] = v      // survivorship union
-                val src = (e["_source_file"] as MutableList<String>)
-                if (filename !in src) src.add(filename)
+                for ((k, v) in doc) if (v != null) e[k] = mergeValue(c, k, e[k], v)
+                val src = sources(e).toMutableList()
+                if (filename !in src) {
+                    src.add(filename)
+                    e["_source_file"] = src
+                }
                 c.merged++
             } else {
                 val e = LinkedHashMap<String, Any?>()
@@ -138,26 +157,52 @@ class CollectionService @Inject constructor(
         return detail(c)
     }
 
-    fun search(name: String, q: String, filters: List<FieldFilter>, size: Int): CollectionSearchResponse? {
+    fun search(
+        name: String,
+        q: String,
+        tag: String,
+        sourceFiles: List<String>,
+        filters: List<FieldFilter>,
+        size: Int,
+        page: Int,
+    ): CollectionSearchResponse? {
         val c = collections[name] ?: return null
         val display = collDisplay(c)
         val dtypes = c.schema.mapValues { Docs.dtypeOf(it.value.osType) }
         val ql = q.lowercase()
+        val tagValue = tag.trim()
+        val sourceValues = sourceFiles.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val safeSize = size.coerceAtLeast(1)
+        val safePage = page.coerceAtLeast(1)
+        val offset = ((safePage - 1).toLong() * safeSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         val out = ArrayList<Map<String, String>>()
+        var total = 0
         for (d in c.entities) {
+            if (tagValue.isNotEmpty() && !entityTags(c, d).contains(tagValue)) continue
+            if (sourceValues.isNotEmpty() && sourceFiles(d).none { it in sourceValues }) continue
             if (filters.any { f -> !Docs.filterMatch(Docs.fieldValues(d[f.field]), f.value, dtypes[f.field]) }) continue
             if (ql.isNotEmpty() && ql !in Docs.blob(d)) continue
-            out.add(display.associateWith { col ->
-                when (col) {
-                    "_source_file" -> sources(d).joinToString(", ") { short(it) }
-                    "name" -> Docs.rowName(d)
-                    else -> Docs.flattenText(d[col])
-                }
-            })
-            if (out.size >= size) break
+            if (total >= offset && out.size < safeSize) {
+                out.add(display.associateWith { col ->
+                    when (col) {
+                        "_source_file" -> sourceFiles(d).joinToString(", ")
+                        "name" -> Docs.rowName(d)
+                        else -> Docs.flattenText(d[col])
+                    }
+                })
+            }
+            total++
         }
-        val query = Dsl.query(q.ifBlank { null }, filters.associate { it.field to it.value }, listOf("*"))
-        return CollectionSearchResponse(display, out.size, out, Dsl.display(query, size), c.index)
+        val query = Dsl.query(
+            q.ifBlank { null },
+            filters.associate { it.field to it.value },
+            listOf("*"),
+            tagValue.ifBlank { null },
+            "_tags",
+            sourceValues.firstOrNull(),
+            "_source_file",
+        )
+        return CollectionSearchResponse(display, out.size, total, safePage, safeSize, out, Dsl.display(query, safeSize), c.index)
     }
 
     // ---- internals ----
@@ -166,8 +211,14 @@ class CollectionService @Inject constructor(
         val cols = mutableListOf("_source_file")
         if (fields.any { it in setOf("full_name", "first_name", "last_name") }) cols.add("name")
         collOrder.filter { it in fields }.forEach { cols.add(it) }
-        return cols.take(8)
+        fields.filterNot { it in cols || it in setOf("full_name", "first_name", "last_name") }
+            .sorted()
+            .forEach { cols.add(it) }
+        return cols
     }
+
+    private fun sourceFiles(entity: Map<String, Any?>): List<String> =
+        sources(entity).map { short(it) }.distinct().sorted()
 
     private fun segmentCount(c: Collection, filters: List<FieldFilter>): Int {
         val dtypes = c.schema.mapValues { Docs.dtypeOf(it.value.osType) }
@@ -192,15 +243,109 @@ class CollectionService @Inject constructor(
             }
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,
-            schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch)
+            schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch,
+            collectionTags(c))
     }
 
-    /** Flatten arrays/objects/multi-source to strings and dynamic-map into one per-collection index. */
+    private val wordRe = Regex("[A-Za-z][A-Za-z0-9'-]{2,}")
+    private val stop = setOf(
+        "the", "and", "for", "with", "from", "that", "this", "they", "them", "their", "will", "would",
+        "about", "into", "onto", "than", "then", "have", "has", "had", "needs", "wants", "asked",
+        "prefers", "main", "more", "less", "very", "also", "but", "not", "are", "was", "were",
+    )
+
+    private fun collectionTags(c: Collection): List<CollectionTag> {
+        val textFields = c.schema.filterValues { it.osType == "text" }.keys
+        if (textFields.isEmpty()) return emptyList()
+        val counts = LinkedHashMap<String, Int>()
+        c.entities.forEach { e ->
+            entityTags(c, e).forEach { counts.merge(it, 1, Int::plus) }
+        }
+        return counts.entries.sortedByDescending { it.value }.take(40).map { CollectionTag(it.key, it.value) }
+    }
+
+    private fun entityTags(c: Collection, entity: Map<String, Any?>): List<String> =
+        c.schema.filterValues { it.osType == "text" }.keys
+            .flatMap { f -> extractKeywords(Docs.flattenText(entity[f])) }
+            .distinct()
+
+    private fun extractKeywords(text: String): List<String> {
+        val words = wordRe.findAll(text.lowercase())
+            .map { it.value.trim('\'', '-') }
+            .filter { it.length >= 3 && it !in stop }
+            .toList()
+        val counts = LinkedHashMap<String, Int>()
+        words.forEach { counts.merge(it, 1, Int::plus) }
+        words.windowed(2).forEach { pair ->
+            if (pair.all { it !in stop }) counts.merge(pair.joinToString(" "), 2, Int::plus)
+        }
+        return counts.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .map { it.key }.take(8)
+    }
+
+    private fun mergeValue(c: Collection, field: String, existing: Any?, incoming: Any?): Any? {
+        if (existing == null) return normalizeValue(c, field, incoming)
+        if (incoming == null) return normalizeValue(c, field, existing)
+        if (c.schema[field]?.cardinality != "array") return existing
+        return mergeTagged(toTagged(existing), toTagged(incoming))
+    }
+
+    private fun normalizeValue(c: Collection, field: String, value: Any?): Any? =
+        if (c.schema[field]?.cardinality == "array") toTagged(value) else value
+
+    private fun toTagged(value: Any?): List<Map<String, Any?>> = when (value) {
+        null -> emptyList()
+        is List<*> -> value.flatMap { toTagged(it) }
+        is Map<*, *> -> {
+            val v = value["value"] ?: return emptyList()
+            listOf(mapOf("type" to (value["type"]?.toString()?.ifBlank { "other" } ?: "other"), "value" to v))
+        }
+        else -> listOf(mapOf("type" to "other", "value" to value))
+    }
+
+    private fun mergeTagged(a: List<Map<String, Any?>>, b: List<Map<String, Any?>>): List<Map<String, Any?>> {
+        val byValue = LinkedHashMap<String, Map<String, Any?>>()
+        for (item in a + b) {
+            val v = item["value"] ?: continue
+            val key = v.toString().trim().lowercase()
+            val prev = byValue[key]
+            if (prev == null || prev["type"] == "other" && item["type"] != "other") byValue[key] = item
+        }
+        return byValue.values.toList()
+    }
+
+    private fun mappingJson(c: Collection): String {
+        val obj = buildJsonObject {
+            putJsonObject("properties") {
+                c.schema.forEach { (field, a) ->
+                    if (a.cardinality == "array") {
+                        putJsonObject(field) {
+                            put("type", "nested")
+                            putJsonObject("properties") {
+                                putJsonObject("type") { put("type", "keyword") }
+                                putJsonObject("value") { put("type", a.osType ?: "keyword") }
+                            }
+                        }
+                    } else {
+                        putJsonObject(field) { put("type", a.osType ?: "keyword") }
+                    }
+                }
+                putJsonObject("_source_file") { put("type", "keyword") }
+                putJsonObject("_tags") { put("type", "keyword") }
+            }
+        }
+        return Json.encodeToString(JsonObject.serializer(), obj)
+    }
+
+    /** Preserve multi-valued fields as tagged nested objects in the per-collection OpenSearch index. */
     private fun reindex(c: Collection): OsStatus = runCatching {
         if (!opensearch.available()) return OsStatus("unavailable")
         val flat = c.entities.map { d ->
-            d.entries.associate { (k, v) -> k to (if (v is List<*> || v is Map<*, *>) Docs.flattenText(v) else v) }
+            val out = LinkedHashMap<String, Any?>()
+            d.entries.forEach { (k, v) -> out[k] = normalizeValue(c, k, v) }
+            out["_tags"] = entityTags(c, d)
+            out
         }
-        OsStatus("indexed", c.index, opensearch.indexDocs(c.index, "{\"properties\":{}}", flat))
+        OsStatus("indexed", c.index, opensearch.indexDocs(c.index, mappingJson(c), flat))
     }.getOrElse { OsStatus("error", detail = it.message?.take(160)) }
 }

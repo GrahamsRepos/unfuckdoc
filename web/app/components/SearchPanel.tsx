@@ -3,6 +3,7 @@ import type { FieldFilter, Overview, SearchResponse } from "~/lib/types";
 import { FieldFilterBar } from "./FieldFilterBar";
 import { ResultsTable } from "./ResultsTable";
 import { Dsl } from "./format";
+import { Pagination } from "./Pagination";
 
 export function SearchPanel({ overview, search }: { overview: Overview; search: SearchResponse | null }) {
   const [params, setParams] = useSearchParams();
@@ -15,6 +16,9 @@ export function SearchPanel({ overview, search }: { overview: Overview; search: 
   const field = params.get("field") ?? overview.fuzzy[0] ?? "";
   const tag = params.get("tag") ?? "";
   const q = params.get("q") ?? "";
+  const showAllColumns = params.get("cols") === "all";
+  const page = Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1);
+  const pageSize = Math.max(1, Number.parseInt(params.get("size") ?? String(search?.page_size ?? 12), 10) || (search?.page_size ?? 12));
 
   function apply(next: URLSearchParams) {
     setParams(next, { preventScrollReset: true });
@@ -24,11 +28,15 @@ export function SearchPanel({ overview, search }: { overview: Overview; search: 
     const fd = new FormData(e.currentTarget);
     const np = new URLSearchParams();
     const qv = String(fd.get("q") ?? "").trim();
-    if (qv) np.set("q", qv);
+    np.set("q", qv);
+    np.set("page", "1");
+    const existingSize = params.get("size");
+    if (existingSize) np.set("size", existingSize);
     np.set("mode", String(fd.get("mode")));
     if (fd.get("field")) np.set("field", String(fd.get("field")));
     const tg = String(fd.get("tag") ?? "");
     if (tg) np.set("tag", tg);
+    if (fd.get("cols") === "all") np.set("cols", "all");
     filters.forEach((f) => np.append("f", `${f.field}:${f.value}`));
     apply(np);
   }
@@ -36,6 +44,7 @@ export function SearchPanel({ overview, search }: { overview: Overview; search: 
     const np = new URLSearchParams(params);
     const key = `${f.field}:${f.value}`;
     if (!np.getAll("f").includes(key)) np.append("f", key);
+    np.set("page", "1");
     apply(np);
   }
   function removeFilter(idx: number) {
@@ -43,12 +52,20 @@ export function SearchPanel({ overview, search }: { overview: Overview; search: 
     const all = np.getAll("f");
     np.delete("f");
     all.forEach((v, i) => i !== idx && np.append("f", v));
+    np.set("page", "1");
+    apply(np);
+  }
+  function setPage(nextPage: number) {
+    const np = new URLSearchParams(params);
+    np.set("page", String(nextPage));
     apply(np);
   }
 
   const banner = search && (
     <p className="hint">
-      {search.count} match(es)
+      {search.count} on this page
+      {" "}
+      <span className="mut">({search.total} total)</span>
       {tag && <> — tag <span className="kw">{tag}</span></>}
       {filters.map((f) => <span key={f.field + f.value}> · <span className="kw">{f.field}={f.value}</span></span>)}
     </p>
@@ -62,6 +79,10 @@ export function SearchPanel({ overview, search }: { overview: Overview; search: 
           <option value="semantic">Semantic (vector)</option>
           <option value="keyword">Keyword</option>
         </select>
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }} title="show every canonical field in the result table">
+          <input type="checkbox" name="cols" value="all" defaultChecked={showAllColumns} />
+          <span className="mut">all columns</span>
+        </label>
         {hasText && (
           <select name="field" defaultValue={field}>
             {overview.fuzzy.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -85,7 +106,11 @@ export function SearchPanel({ overview, search }: { overview: Overview; search: 
           {search.error ? (
             <div className="empty">⚠ {search.error}</div>
           ) : search.results.length ? (
-            <ResultsTable columns={search.display_columns} results={search.results} />
+            <>
+              <ResultsTable columns={search.display_columns} results={search.results} />
+              <Pagination page={search.page} pageSize={search.page_size ?? pageSize} total={search.total}
+                onPage={setPage} />
+            </>
           ) : (
             <div className="empty">no matches</div>
           )}

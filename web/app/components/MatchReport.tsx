@@ -1,4 +1,5 @@
 import type { MatchResult } from "~/lib/types";
+import { Dsl } from "./format";
 
 export function MatchReport({ result, a, b }: { result: MatchResult; a: string; b: string }) {
   if (result.error) return <div className="empty">⚠ {result.error}</div>;
@@ -17,6 +18,7 @@ export function MatchReport({ result, a, b }: { result: MatchResult; a: string; 
         joined <code>{shortA}</code> ⋈ <code>{shortB}</code> on{" "}
         <span className="canon">{result.key}</span> · threshold {result.threshold}
       </p>
+      <Dsl dsl={result.dsl} />
       {result.pairs.length > 0 && (
         <div className="scroll">
           <table>
