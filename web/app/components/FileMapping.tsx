@@ -12,9 +12,13 @@ const COMMON = [
  *  canonical to unify them. ↺ re-infers. Any change rebuilds the merge (posts intent=set-mapping). */
 export function FileMapping({ detail }: { detail: CollectionDetail }) {
   const submit = useSubmit();
-  // collection-wide targets: every canonical already in the schema (incl. user-defined ones) + the
-  // built-in common set. A custom canonical becomes a schema field once used, so it's offered everywhere.
-  const canonicals = Array.from(new Set([...detail.schema.map((s) => s.field), ...COMMON])).sort();
+  // collection-wide targets: user-defined canonicals (defined up front) + every canonical already in
+  // the schema + the built-in common set. Custom ones appear as options even before any column uses them.
+  const canonicals = Array.from(new Set([
+    ...(detail.custom_canonicals ?? []).map((c) => c.name),
+    ...detail.schema.map((s) => s.field),
+    ...COMMON,
+  ])).sort();
 
   function setMapping(column: string, canonical: string) {
     const fd = new FormData();

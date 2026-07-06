@@ -29,6 +29,11 @@ data class Segment(val name: String, val filters: List<FieldFilter>, val count: 
 @Serializable
 data class CollectionTag(val tag: String, val count: Int)
 
+/** A user-defined canonical field: a named target (with a declared type) that columns can be mapped
+ *  onto, offered in the mapping dropdowns alongside the built-in canonicals. */
+@Serializable
+data class CustomCanonical(val name: String, val osType: String, val inUse: Boolean = false)
+
 @Serializable
 data class CollectionDetail(
     val name: String, val index: String, val nRecords: Int,
@@ -36,6 +41,7 @@ data class CollectionDetail(
     val schema: List<SchemaFieldDto>, val files: List<CollectionFileDto>,
     val segments: List<Segment>, val opensearch: OsStatus,
     val tags: List<CollectionTag> = emptyList(),
+    val customCanonicals: List<CustomCanonical> = emptyList(),
 )
 
 @Serializable

@@ -36,6 +36,7 @@ class CollectionService @Inject constructor(
         val entities = mutableListOf<MutableMap<String, Any?>>()   // deduped buckets
         val keyIndex = HashMap<String, Int>()                       // normalized key value -> bucket index
         val segments = mutableListOf<Pair<String, List<FieldFilter>>>()   // named filtered views
+        val customCanonicals = LinkedHashMap<String, String>()            // user-defined canonical -> osType
         var rawRecords = 0
         var merged = 0
         var opensearch = OsStatus("unknown")
@@ -151,6 +152,27 @@ class CollectionService @Inject constructor(
         return detail(c)
     }
 
+    private val allowedTypes = setOf("keyword", "text", "long", "double", "date", "boolean")
+
+    /** Define (or update) a user-defined canonical target with a declared type. */
+    fun putCanonical(name: String, canon: String, osType: String): CollectionDetail? {
+        val c = collections[name] ?: return null
+        val cn = canon.trim().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+        if (cn.isEmpty()) return detail(c)
+        c.customCanonicals[cn] = osType.takeIf { it in allowedTypes } ?: "keyword"
+        rebuild(c); c.opensearch = reindex(c)
+        return detail(c)
+    }
+
+    /** Remove a user-defined canonical; any columns mapped to it fall back to inference. */
+    fun deleteCanonical(name: String, canon: String): CollectionDetail? {
+        val c = collections[name] ?: return null
+        c.customCanonicals.remove(canon)
+        c.overrides.entries.removeAll { it.value == canon }   // drop overrides pointing at it
+        rebuild(c); c.opensearch = reindex(c)
+        return detail(c)
+    }
+
     fun deleteSegment(name: String, segName: String): CollectionDetail? {
         val c = collections[name] ?: return null
         c.segments.removeAll { it.first == segName }
@@ -238,13 +260,16 @@ class CollectionService @Inject constructor(
         val schema = c.schema.entries
             .sortedWith(compareBy({ -it.value.sources.size }, { it.key }))
             .map { (field, a) ->
-                SchemaFieldDto(field, a.osType, a.kind, a.cardinality, a.sources.map { short(it) },
-                    a.sources.size, a.count, a.types.size > 1, facetValues(c, field, a.osType))
+                // a defined custom canonical governs its field's type
+                val osType = c.customCanonicals[field] ?: a.osType
+                SchemaFieldDto(field, osType, a.kind, a.cardinality, a.sources.map { short(it) },
+                    a.sources.size, a.count, a.types.size > 1, facetValues(c, field, osType))
             }
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
+        val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, c.schema.containsKey(n)) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,
             schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch,
-            collectionTags(c))
+            collectionTags(c), custom)
     }
 
     private val wordRe = Regex("[A-Za-z][A-Za-z0-9'-]{2,}")

@@ -50,6 +50,11 @@ export const api = {
   },
   setMapping: (name: string, column: string, canonical: string) =>
     postJson<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}/mapping`, { column, canonical }),
+  addCanonical: (name: string, canon: string, type: string) =>
+    postJson<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}/canonicals`, { name: canon, type }),
+  deleteCanonical: async (name: string, canon: string) => {
+    await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/canonicals/${encodeURIComponent(canon)}`, { method: "DELETE" });
+  },
   setCollectionKey: (name: string, key: string) =>
     postJson<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}/key`, { key }),
   addSampleToCollection: (name: string, sample: string) =>

@@ -7,6 +7,7 @@ import { FileMapping } from "~/components/FileMapping";
 import { CollectionSearchPanel } from "~/components/CollectionSearchPanel";
 import { Segments } from "~/components/Segments";
 import { MergeGraph } from "~/components/MergeGraph";
+import { CustomCanonicals } from "~/components/CustomCanonicals";
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `collection · ${params.name}` }];
@@ -58,6 +59,14 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
   if (intent === "set-mapping") {
     await api.setMapping(params.name, String(form.get("column")), String(form.get("canonical") ?? ""));
+    return redirect(base);
+  }
+  if (intent === "add-canonical") {
+    await api.addCanonical(params.name, String(form.get("canon") ?? ""), String(form.get("type") ?? "keyword"));
+    return redirect(base);
+  }
+  if (intent === "delete-canonical") {
+    await api.deleteCanonical(params.name, String(form.get("canon")));
     return redirect(base);
   }
   if (intent === "set-key") {
@@ -153,6 +162,7 @@ export default function Collection({ loaderData }: Route.ComponentProps) {
       )}
       <MergeGraph detail={detail} />
       <CollectionSchema detail={detail} />
+      <CustomCanonicals detail={detail} />
       <FileMapping detail={detail} />
       <CollectionSearchPanel detail={detail} search={search} />
     </>

@@ -131,11 +131,12 @@ export interface FileMappingEntry { column: string; canonical: string; method: s
 export interface CollectionFile { name: string; rows: number; mapping: FileMappingEntry[]; }
 export interface Segment { name: string; filters: FieldFilter[]; count: number; }
 export interface CollectionTag { tag: string; count: number; }
+export interface CustomCanonical { name: string; os_type: string; in_use: boolean; }
 export interface CollectionDetail {
   name: string; index: string; n_records: number;
   key_field: string; raw_records: number; merged: number;
   schema: SchemaField[]; files: CollectionFile[]; segments: Segment[]; opensearch: OsStatus;
-  tags: CollectionTag[];
+  tags: CollectionTag[]; custom_canonicals: CustomCanonical[];
 }
 export interface CollectionSearchResponse {
   display: string[]; count: number; total: number; page: number; page_size: number;
