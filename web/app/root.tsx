@@ -48,8 +48,8 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       <h2>{title}</h2>
       {detail ? <pre className="dsl">{detail}</pre> : null}
       <p className="hint">
-        Is the Flask API running on <code>:5001</code>? Start it with{" "}
-        <code>python3 src/webapp.py</code>.
+        Is the Kotlin API running on <code>:8080</code>? Start it with{" "}
+        <code>cd server-kt &amp;&amp; ./gradlew run</code>.
       </p>
     </div>
   );
