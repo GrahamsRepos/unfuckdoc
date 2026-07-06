@@ -43,7 +43,7 @@ import java.io.File
 )
 @Serializable data class SegmentRequest(val name: String, val filters: List<FieldFilter> = emptyList())
 @Serializable data class MappingOverrideRequest(val column: String, val canonical: String = "")
-@Serializable data class CustomCanonicalRequest(val name: String, val type: String = "keyword")
+@Serializable data class CustomCanonicalRequest(val name: String, val type: String = "keyword", val array: Boolean = false)
 @Serializable data class CollectionKeyRequest(val key: String)
 @Serializable data class MatchCandidatesRequest(val a: String, val b: String)
 @Serializable data class MatchRequest(val a: String, val b: String, val key: String? = null, val threshold: Double = 0.85)
@@ -179,7 +179,7 @@ class ApiController @Inject constructor(
 
         post("/api/collections/{name}/canonicals") {
             val req = call.receive<CustomCanonicalRequest>()
-            call.respond(collections.putCanonical(call.parameters["name"]!!, req.name, req.type)
+            call.respond(collections.putCanonical(call.parameters["name"]!!, req.name, req.type, req.array)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
         }
 

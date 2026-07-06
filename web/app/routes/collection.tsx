@@ -62,7 +62,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     return redirect(base);
   }
   if (intent === "add-canonical") {
-    await api.addCanonical(params.name, String(form.get("canon") ?? ""), String(form.get("type") ?? "keyword"));
+    await api.addCanonical(params.name, String(form.get("canon") ?? ""), String(form.get("type") ?? "keyword"), form.get("array") === "on");
     return redirect(base);
   }
   if (intent === "delete-canonical") {

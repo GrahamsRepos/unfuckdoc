@@ -30,6 +30,10 @@ export function CustomCanonicals({ detail }: { detail: CollectionDetail }) {
             {TYPES.map(([label, os]) => <option key={os} value={os}>{label}</option>)}
           </select>
         </label>
+        <label className="mut" style={{ display: "flex", alignItems: "center", gap: 6 }}
+          title="the field holds a list — delimited cells (golf; wine) are split; multiple columns/files union">
+          <input type="checkbox" name="array" /> multi-value (list)
+        </label>
         <button className="btn" type="submit">+ define</button>
       </Form>
 
@@ -38,7 +42,8 @@ export function CustomCanonicals({ detail }: { detail: CollectionDetail }) {
         {custom.map((cc) => (
           <span key={cc.name} className="chip" style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
             <b>{cc.name}</b>
-            <span className="mut">{typeLabel(cc.os_type)}</span>
+            <span className="mut">{typeLabel(cc.os_type)}{cc.array ? "[]" : ""}</span>
+            {cc.array && <span className="badge" style={{ background: "#22203a", color: "#c9b8ff" }}>list</span>}
             {cc.in_use && <span className="badge" style={{ background: "#0d2847", color: "#79c0ff" }}>in use</span>}
             <Form method="post" style={{ display: "inline" }}
               onSubmit={(e) => { if (!confirm(`Delete custom canonical "${cc.name}"? Columns mapped to it revert to inference.`)) e.preventDefault(); }}>

@@ -11,6 +11,8 @@ import com.unfuckdoc.domain.SemanticCanonicalizer
 import com.unfuckdoc.opensearch.OpenSearchService
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -124,7 +126,7 @@ class CollectionServiceTest {
                 mapOf("email" to "b@example.com", "spend" to "300"),
             ),
         )
-        service.putCanonical("deals", "deal_size", "double")
+        service.putCanonical("deals", "deal_size", "double", false)
         service.setMapping("deals", "spend", "deal_size")
 
         val detail = service.detail("deals")!!
@@ -133,6 +135,35 @@ class CollectionServiceTest {
 
         val res = service.search("deals", "", "", emptyList(), listOf(FieldFilter("deal_size", ">150")), 10, 1)!!
         assertEquals(1, res.total, "range filter on a numeric custom canonical should match only spend>150")
+    }
+
+    @Test
+    fun `multi-value custom canonical splits delimited cells into a list and filters per element`() {
+        val service = CollectionService(
+            Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
+            Consolidator(),
+            unavailableOpenSearch(),
+        )
+        service.create("aud", "email")
+        service.add(
+            "aud", "i.csv",
+            listOf("email", "interests"),
+            listOf(
+                mapOf("email" to "a@example.com", "interests" to "golf; wine; travel"),
+                mapOf("email" to "b@example.com", "interests" to "wine|cooking"),
+            ),
+        )
+        service.putCanonical("aud", "interests", "keyword", true)
+
+        val detail = service.detail("aud")!!
+        val field = detail.schema.first { it.field == "interests" }
+        assertEquals("array", field.cardinality)
+        // enumerated per element, not one lumped string
+        val values = field.values?.map { (it as JsonArray)[0].jsonPrimitive.content }?.toSet()
+        assertEquals(setOf("golf", "wine", "travel", "cooking"), values)
+
+        val res = service.search("aud", "", "", emptyList(), listOf(FieldFilter("interests", "wine")), 10, 1)!!
+        assertEquals(2, res.total, "both records list wine among their interests")
     }
 
     private fun unavailableOpenSearch(): OpenSearchService {

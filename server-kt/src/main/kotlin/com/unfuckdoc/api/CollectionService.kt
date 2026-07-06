@@ -37,6 +37,7 @@ class CollectionService @Inject constructor(
         val keyIndex = HashMap<String, Int>()                       // normalized key value -> bucket index
         val segments = mutableListOf<Pair<String, List<FieldFilter>>>()   // named filtered views
         val customCanonicals = LinkedHashMap<String, String>()            // user-defined canonical -> osType
+        val customArrays = LinkedHashSet<String>()                        // customs declared multi-value (list)
         var rawRecords = 0
         var merged = 0
         var opensearch = OsStatus("unknown")
@@ -116,6 +117,10 @@ class CollectionService @Inject constructor(
             if (filename !in agg.sources) agg.sources.add(filename)
             agg.types.add(u.osType)
             if (u.cardinality == "array") agg.cardinality = "array"
+            // a user-defined canonical's declared type/cardinality govern the field before the merge
+            // reads them (search dtypes, facets, display all follow).
+            c.customCanonicals[u.canonical]?.let { agg.osType = it }
+            if (u.canonical in c.customArrays) agg.cardinality = "array"
         }
         for (doc in cons.docs) {
             c.rawRecords++
@@ -123,7 +128,7 @@ class CollectionService @Inject constructor(
             val idx = if (kv.isNotEmpty()) c.keyIndex[kv] else null
             if (idx != null) {
                 val e = c.entities[idx]
-                for ((k, v) in doc) if (v != null) e[k] = mergeValue(c, k, e[k], v)
+                for ((k, v) in doc) if (v != null) e[k] = mergeValue(c, k, e[k], listValue(c, k, v))
                 val src = sources(e).toMutableList()
                 if (filename !in src) {
                     src.add(filename)
@@ -132,18 +137,13 @@ class CollectionService @Inject constructor(
                 c.merged++
             } else {
                 val e = LinkedHashMap<String, Any?>()
-                for ((k, v) in doc) if (v != null) e[k] = v
+                for ((k, v) in doc) if (v != null) e[k] = normalizeValue(c, k, listValue(c, k, v))
                 e["_source_file"] = mutableListOf(filename)
                 c.entities.add(e)
                 if (kv.isNotEmpty()) c.keyIndex[kv] = c.entities.size - 1
             }
         }
-        c.schema.forEach { (canon, agg) ->
-            agg.count = c.entities.count { it[canon] != null }
-            // a user-defined canonical's declared type governs the field everywhere (search dtypes,
-            // facets, display) — not just the detail view.
-            c.customCanonicals[canon]?.let { agg.osType = it }
-        }
+        c.schema.forEach { (canon, agg) -> agg.count = c.entities.count { it[canon] != null } }
         c.files.add(CollectionFileDto(filename, result.nRows, mapping))
         return mapping
     }
@@ -159,12 +159,13 @@ class CollectionService @Inject constructor(
 
     private val allowedTypes = setOf("keyword", "text", "long", "double", "date", "boolean")
 
-    /** Define (or update) a user-defined canonical target with a declared type. */
-    fun putCanonical(name: String, canon: String, osType: String): CollectionDetail? {
+    /** Define (or update) a user-defined canonical target with a declared type. `array` = multi-value. */
+    fun putCanonical(name: String, canon: String, osType: String, array: Boolean): CollectionDetail? {
         val c = collections[name] ?: return null
         val cn = canon.trim().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
         if (cn.isEmpty()) return detail(c)
         c.customCanonicals[cn] = osType.takeIf { it in allowedTypes } ?: "keyword"
+        if (array) c.customArrays.add(cn) else c.customArrays.remove(cn)
         rebuild(c); c.opensearch = reindex(c)
         return detail(c)
     }
@@ -173,10 +174,21 @@ class CollectionService @Inject constructor(
     fun deleteCanonical(name: String, canon: String): CollectionDetail? {
         val c = collections[name] ?: return null
         c.customCanonicals.remove(canon)
+        c.customArrays.remove(canon)
         c.overrides.entries.removeAll { it.value == canon }   // drop overrides pointing at it
         rebuild(c); c.opensearch = reindex(c)
         return detail(c)
     }
+
+    // split a delimited multi-value cell into its members (for canonicals declared multi-value)
+    private val listDelim = Regex("\\s*[;|,\\n/]\\s*")
+    private fun splitMulti(s: String): List<String> =
+        s.split(listDelim).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+
+    /** For a canonical declared multi-value, split a single delimited cell ("golf; wine") into a list
+     *  so it consolidates into one array field. Non-array fields / non-strings pass through. */
+    private fun listValue(c: Collection, field: String, v: Any?): Any? =
+        if (field in c.customArrays && v is String) splitMulti(v) else v
 
     fun deleteSegment(name: String, segName: String): CollectionDetail? {
         val c = collections[name] ?: return null
@@ -270,7 +282,7 @@ class CollectionService @Inject constructor(
                     a.sources.size, a.count, a.types.size > 1, facetValues(c, field, a.osType))
             }
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
-        val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, c.schema.containsKey(n)) }
+        val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, n in c.customArrays, c.schema.containsKey(n)) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,
             schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch,
             collectionTags(c), custom)
