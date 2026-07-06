@@ -57,16 +57,17 @@ class CanonicalBenchmarkTest {
     fun `adversarial suite holds its baseline`() {
         val s = grade("benchmark_answers.json")
         println("adversarial: ${s.correct}/${s.n} correct, fp=${s.fp} miss=${s.miss} wrong=${s.wrong}")
-        // baseline locked at 27/42, 7 FP — assert no regression below it
-        assertTrue(s.correct >= 27, "adversarial correct regressed: ${s.correct} < 27")
-        assertTrue(s.fp <= 7, "adversarial false-positives regressed: ${s.fp} > 7")
+        // baseline locked at 28/42, 6 FP (after date/title/*_ref alias fixes) — no regression below it
+        assertTrue(s.correct >= 28, "adversarial correct regressed: ${s.correct} < 28")
+        assertTrue(s.fp <= 6, "adversarial false-positives regressed: ${s.fp} > 6")
     }
 
     @Test
     fun `sales multi-source suite holds its baseline`() {
         val s = grade("sales_answers.json")
         println("sales: ${s.correct}/${s.n} correct, fp=${s.fp} miss=${s.miss} wrong=${s.wrong}")
-        assertTrue(s.correct >= 53, "sales correct regressed: ${s.correct} < 53")
+        // baseline locked at 65/71 (after date/title/*_ref alias fixes)
+        assertTrue(s.correct >= 65, "sales correct regressed: ${s.correct} < 65")
         assertTrue(s.fp <= 2, "sales false-positives regressed: ${s.fp} > 2")
     }
 

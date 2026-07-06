@@ -33,8 +33,10 @@ canonical inference **and** the cross-source merge (load all six into a collecti
 
 | Suite | Correct | False-positives | Misses |
 |---|---|---|---|
-| Adversarial (42 cols) | 27 (64%) | 7 | 8 |
-| Sales sources (63 cols) | 53 (84%) | 2 | 1 (+7 date/loc misses) |
+| Adversarial (42 cols) | 28 (67%) | 6 | 8 |
+| Sales sources (71 cols) | 65 (92%) | 2 | 3 |
+
+_(after the date-naming + `title` + `*_ref` alias fixes; was 27/64% and 53/84%.)_
 
 Merge on the sales pack: **6 sources · 171 raw rows → 132 merged → 39 unique contacts**; `company`
 and `email` unify across all 6.
@@ -42,15 +44,17 @@ and `email` unify across all 6.
 ## Failure classes this surfaced (the build backlog)
 
 - **False positives (semantic over-reach):** `carrier→phone`, `rate→rating`, `tail_number→phone`,
-  `industry→company`. → the **cross-encoder reranker** tier is aimed exactly here.
-- **Alias over-breadth:** `account_ref→company` (`account` alias too broad), `sku/hs_code→identifier`,
-  `employee_count→quantity`.
-- **Date-naming recall gap:** `Last Contacted / Connected On / OPTIN_TIME / when / *_on / *_at` stay
-  identity — the date alias set has no verb-participle patterns, so dates don't unify across sources.
+  `industry→company`. → the **cross-encoder reranker** tier is aimed exactly here. _(open)_
+- ~~**Alias over-breadth:** `account_ref→company`~~ **FIXED** — unambiguous `*_ref/uuid/guid`
+  suffixes now resolve to `identifier` before the business-noun aliases. (`sku/hs_code→identifier`
+  and `employee_count→quantity` remain — reranker/context territory.)
+- ~~**Date-naming recall gap**~~ **FIXED** — date alias set now includes temporal participles/prepositions
+  (`...ed on/at`, `signup`, `optin`, `dob`, `contacted`, `connected`, …), type-gated to date columns,
+  so `Last Contacted / Connected On / OPTIN_TIME` unify to `date` across sources.
+- ~~**Fragmented `title` vs `job_title`**~~ **FIXED** — `title` added to `job_title` aliases; job titles
+  now unify across Salesforce/Apollo and HubSpot/LinkedIn.
 - **Multilingual recall:** es/fr headers (`nombre/correo/pais/edad`) mostly stay identity — the
-  English MiniLM can't bridge them. → **multilingual embedder** (paraphrase-multilingual / bge-m3).
-- **Fragmented synonyms hurt merge:** `title` vs `job_title` stay separate canonicals, so job titles
-  don't unify across Salesforce/Apollo vs HubSpot/LinkedIn.
+  English MiniLM can't bridge them. → **multilingual embedder** (paraphrase-multilingual / bge-m3). _(open)_
 - **Multi-value consolidation stem-gate bug** (`multichannel_crm.csv`): `Mobile`/`Work Phone`/
   `Home Phone` all map to `phone` but stay **scalar** (only 1 kept) because they share no column-name
   stem, while `Email`/`Work Email`/`Personal Email` correctly array (they share `Email`). Fix: when

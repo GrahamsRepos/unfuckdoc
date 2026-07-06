@@ -26,14 +26,18 @@ class Canonicalizer @Inject constructor() {
         Canon("company", setOf("company", "organization", "organisation", "org", "employer", "business",
             "vendor", "supplier", "winery", "brand", "account", "firm"), str),
         Canon("full_name", setOf("name", "fullname", "person", "taster"), str),
-        Canon("job_title", setOf("jobtitle", "role", "position", "designation", "occupation"), str),
+        Canon("job_title", setOf("jobtitle", "title", "role", "position", "designation", "occupation"), str),
         Canon("country", setOf("country", "cntry", "ctry", "nation", "countrycode"), str),
         Canon("region", setOf("region", "state", "province", "county", "territory", "area"), str),
         Canon("interests", setOf("interest", "interests", "hobby", "hobbies", "topic", "topics"), setOf("enum", "identifier")),
         Canon("city", setOf("city", "town", "municipality"), str),
         Canon("address", setOf("address", "addr", "street"), null),
         Canon("postal_code", setOf("zip", "zipcode", "postal", "postcode", "postalcode"), str),
-        Canon("date", setOf("date", "datetime", "timestamp", "created", "updated", "modified", "day", "time"), setOf("date", "numeric")),
+        // date is type-gated to date|numeric, so temporal-event/participle tokens ("...ed on/at",
+        // signup, dob) only match columns whose values actually parse as dates.
+        Canon("date", setOf("date", "datetime", "timestamp", "created", "updated", "modified", "day", "time",
+            "on", "at", "signup", "optin", "dob", "birthday", "birthdate", "contacted", "connected", "signed",
+            "joined", "pledged", "dispatched", "opened", "acquired", "released", "expires", "expiry"), setOf("date", "numeric")),
         Canon("url", setOf("url", "link", "website", "site", "web", "homepage", "handle"), str),
         Canon("identifier", setOf("id", "identifier", "uuid", "guid", "key", "ref", "reference", "sku", "code"), setOf("identifier", "numeric")),
         Canon("gender", setOf("gender", "sex"), setOf("enum")),
@@ -55,9 +59,15 @@ class Canonicalizer @Inject constructor() {
     data class Spec(val name: String, val aliases: Set<String>, val types: Set<String>?)
     val specs: List<Spec> get() = canon.map { Spec(it.name, it.aliases, it.types) }
 
+    private val idKinds = setOf("identifier", "numeric")
+    private val idSuffix = setOf("ref", "reference", "uuid", "guid")
+
     /** Returns canonical name + method ("alias" | "identity"). */
     fun canonicalize(name: String, kind: String): Pair<String, String> {
         val toks = nameTokens(name).toSet()
+        // Unambiguous identifier suffixes win outright: a *_ref / *_uuid column is an id, not a
+        // business noun (fixes account_ref -> identifier without disturbing "Account Name" -> company).
+        if (kind in idKinds && toks.any { it in idSuffix }) return "identifier" to "alias"
         for (c in canon) {
             if (c.types != null && kind !in c.types) continue
             if (toks.any { it in c.aliases }) return c.name to "alias"

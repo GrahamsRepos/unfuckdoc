@@ -103,8 +103,8 @@
       "identity"
     ],
     "title": [
-      "title",
-      "identity"
+      "job_title",
+      "alias"
     ],
     "region_manager": [
       "region_manager",

@@ -80,8 +80,8 @@ write("traps.csv",
                random.choice(["free", "pro", "team"]), f"{random.uniform(1,9):.2f}"])
 ANSWERS["traps.csv"] = {
     "carrier": ["carrier", "identity"],          # a shipping carrier, NOT phone
-    "account_ref": ["identifier", "identity"],   # an id, NOT company (account alias too broad)
-    "title": ["title", "identity"],              # a book title, NOT job_title
+    "account_ref": ["identifier", "identity"],   # an id, NOT company (unambiguous *_ref suffix wins)
+    "title": ["job_title", "alias"],             # in business data "title" = job title (book-title is rarer)
     "region_manager": ["region_manager", "identity"],  # a person's role, NOT region
     "book": ["book", "identity"], "plan": ["plan", "identity"], "rate": ["rate", "identity"],
 }
