@@ -1,0 +1,300 @@
+{
+  "sales/salesforce_export.csv": {
+    "Id": [
+      "identifier",
+      "identity"
+    ],
+    "First Name": [
+      "first_name",
+      "alias"
+    ],
+    "Last Name": [
+      "last_name",
+      "alias"
+    ],
+    "Title": [
+      "job_title",
+      "alias"
+    ],
+    "Account Name": [
+      "company",
+      "alias"
+    ],
+    "Email": [
+      "email",
+      "alias"
+    ],
+    "Phone": [
+      "phone",
+      "alias"
+    ],
+    "Mailing City": [
+      "city",
+      "alias"
+    ],
+    "Mailing Country": [
+      "country",
+      "alias"
+    ],
+    "Annual Revenue": [
+      "amount",
+      "alias"
+    ],
+    "Lead Source": [
+      "lead_source",
+      "identity"
+    ],
+    "Created Date": [
+      "date",
+      "alias"
+    ]
+  },
+  "sales/hubspot_export.csv": {
+    "Record ID": [
+      "identifier",
+      "alias"
+    ],
+    "First Name": [
+      "first_name",
+      "alias"
+    ],
+    "Last Name": [
+      "last_name",
+      "alias"
+    ],
+    "Email": [
+      "email",
+      "alias"
+    ],
+    "Phone Number": [
+      "phone",
+      "alias"
+    ],
+    "Company Name": [
+      "company",
+      "alias"
+    ],
+    "Job Title": [
+      "job_title",
+      "alias"
+    ],
+    "City": [
+      "city",
+      "alias"
+    ],
+    "Country/Region": [
+      "country",
+      "alias"
+    ],
+    "Create Date": [
+      "date",
+      "alias"
+    ],
+    "Original Source": [
+      "source",
+      "identity"
+    ],
+    "Lifecycle Stage": [
+      "lifecycle_stage",
+      "identity"
+    ]
+  },
+  "sales/mailchimp_export.csv": {
+    "Email Address": [
+      "email",
+      "alias"
+    ],
+    "First Name": [
+      "first_name",
+      "alias"
+    ],
+    "Last Name": [
+      "last_name",
+      "alias"
+    ],
+    "Company": [
+      "company",
+      "alias"
+    ],
+    "Phone": [
+      "phone",
+      "alias"
+    ],
+    "Address": [
+      "address",
+      "alias"
+    ],
+    "MEMBER_RATING": [
+      "rating",
+      "semantic"
+    ],
+    "OPTIN_TIME": [
+      "date",
+      "semantic"
+    ],
+    "TAGS": [
+      "interests",
+      "semantic"
+    ]
+  },
+  "sales/rep_spreadsheet.csv": {
+    "Name": [
+      "full_name",
+      "alias"
+    ],
+    "Co.": [
+      "company",
+      "semantic"
+    ],
+    "e-mail": [
+      "email",
+      "alias"
+    ],
+    "Cell": [
+      "phone",
+      "alias"
+    ],
+    "Loc": [
+      "city",
+      "semantic"
+    ],
+    "Country": [
+      "country",
+      "alias"
+    ],
+    "$ Value": [
+      "amount",
+      "semantic"
+    ],
+    "Stage": [
+      "stage",
+      "identity"
+    ],
+    "Last Contacted": [
+      "date",
+      "semantic"
+    ],
+    "Notes": [
+      "description",
+      "alias"
+    ]
+  },
+  "sales/linkedin_navigator.csv": {
+    "First Name": [
+      "first_name",
+      "alias"
+    ],
+    "Last Name": [
+      "last_name",
+      "alias"
+    ],
+    "Company": [
+      "company",
+      "alias"
+    ],
+    "Position": [
+      "job_title",
+      "semantic"
+    ],
+    "Location": [
+      "city",
+      "semantic"
+    ],
+    "Email Address": [
+      "email",
+      "alias"
+    ],
+    "Connected On": [
+      "date",
+      "semantic"
+    ],
+    "Profile URL": [
+      "url",
+      "alias"
+    ]
+  },
+  "sales/apollo_leads.csv": {
+    "first_name": [
+      "first_name",
+      "alias"
+    ],
+    "last_name": [
+      "last_name",
+      "alias"
+    ],
+    "title": [
+      "job_title",
+      "alias"
+    ],
+    "company_name": [
+      "company",
+      "alias"
+    ],
+    "work_email": [
+      "email",
+      "semantic"
+    ],
+    "mobile_phone": [
+      "phone",
+      "alias"
+    ],
+    "city": [
+      "city",
+      "alias"
+    ],
+    "state": [
+      "region",
+      "alias"
+    ],
+    "country": [
+      "country",
+      "alias"
+    ],
+    "industry": [
+      "industry",
+      "identity"
+    ],
+    "seniority": [
+      "seniority",
+      "identity"
+    ],
+    "employee_count": [
+      "employee_count",
+      "identity"
+    ]
+  },
+  "sales/multichannel_crm.csv": {
+    "Email": [
+      "email",
+      "alias"
+    ],
+    "First Name": [
+      "first_name",
+      "alias"
+    ],
+    "Last Name": [
+      "last_name",
+      "alias"
+    ],
+    "Mobile": [
+      "phone",
+      "alias"
+    ],
+    "Work Phone": [
+      "phone",
+      "alias"
+    ],
+    "Home Phone": [
+      "phone",
+      "alias"
+    ],
+    "Work Email": [
+      "email",
+      "alias"
+    ],
+    "Personal Email": [
+      "email",
+      "alias"
+    ]
+  }
+}

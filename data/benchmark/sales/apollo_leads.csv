@@ -1,0 +1,31 @@
+first_name,last_name,title,company_name,work_email,mobile_phone,city,state,country,industry,seniority,employee_count
+Sven,Tanaka,Founder,Vertex Robotics,sven.tanaka@vertex.com,+1-555-2246,Madrid,MD,Spain,Retail,VP,5000
+Ivan,Bauer,VP Sales,Vertex Robotics,ivan.bauer@redwood.com,+1-555-4732,Lagos,LA,Nigeria,Retail,Manager,5000
+Elena,Silva,Account Executive,Blue Harbor Foods,elena.silva@acme.com,+1-555-9326,Berlin,BE,Germany,Healthcare,Director,200
+Noah,Bauer,Marketing Lead,Sunrise Textiles,noah.bauer@cobalt.com,+1-555-3721,Austin,TX,USA,Retail,Manager,200
+Leila,Costa,Account Executive,Cobalt Health,leila.costa@vertex.com,+1-555-5846,Osaka,OSK,Japan,Manufacturing,C-Suite,1000
+Marcus,Silva,Founder,Blue Harbor Foods,marcus.silva@northwind.com,+1-555-2713,Berlin,BE,Germany,Healthcare,Manager,5000
+Ivan,Costa,VP Sales,Meridian Systems,ivan.costa@sunrise.com,+1-555-2553,Mumbai,MH,India,Manufacturing,VP,1000
+Amara,Costa,Founder,Sunrise Textiles,amara.costa@cobalt.com,+1-555-7668,Toronto,ON,Canada,Logistics,Manager,5000
+Kenji,Silva,Marketing Lead,Blue Harbor Foods,kenji.silva@meridian.com,+1-555-1348,Lagos,LA,Nigeria,Healthcare,Director,200
+Leila,Silva,VP Sales,Redwood Ceramics,leila.silva@northwind.com,+1-555-3287,Toronto,ON,Canada,Manufacturing,C-Suite,1000
+Sofia,Khan,Founder,Acme Analytics,sofia.khan@cobalt.com,+1-555-4501,Lagos,LA,Nigeria,Healthcare,Director,1000
+Leila,Tanaka,Founder,Vertex Robotics,leila.tanaka@northwind.com,+1-555-1151,Osaka,OSK,Japan,SaaS,Director,5000
+Ivan,Bauer,Founder,Acme Analytics,ivan.bauer@cobalt.com,+1-555-1408,Berlin,BE,Germany,Retail,C-Suite,1000
+Wei,Silva,Marketing Lead,Redwood Ceramics,wei.silva@vertex.com,+1-555-6650,Lyon,ARA,France,Manufacturing,VP,200
+Marcus,Reddy,Account Executive,Blue Harbor Foods,marcus.reddy@vertex.com,+1-555-1468,Osaka,OSK,Japan,Healthcare,VP,50
+Nadia,Nguyen,Operations Manager,Redwood Ceramics,nadia.nguyen@cobalt.com,+1-555-8883,Osaka,OSK,Japan,Healthcare,Director,200
+Sofia,Nguyen,CFO,Cobalt Health,sofia.nguyen@redwood.com,+1-555-4125,Austin,TX,USA,Manufacturing,VP,200
+Sven,Silva,VP Sales,Northwind Traders,sven.silva@redwood.com,+1-555-1940,Madrid,MD,Spain,Healthcare,Director,50
+Diego,Costa,Account Executive,Cobalt Health,diego.costa@sunrise.com,+1-555-3508,Toronto,ON,Canada,SaaS,C-Suite,50
+Wei,Nguyen,Marketing Lead,Cobalt Health,wei.nguyen@vertex.com,+1-555-8139,Berlin,BE,Germany,SaaS,Manager,200
+Wei,Costa,Marketing Lead,Redwood Ceramics,wei.costa@vertex.com,+1-555-1320,Berlin,BE,Germany,Logistics,VP,5000
+Sven,Reddy,Account Executive,Redwood Ceramics,sven.reddy@vertex.com,+1-555-3006,Lyon,ARA,France,Retail,Manager,1000
+Elena,Nguyen,Founder,Meridian Systems,elena.nguyen@sunrise.com,+1-555-1167,Osaka,OSK,Japan,Manufacturing,Manager,50
+Mei,Nguyen,VP Sales,Sunrise Textiles,mei.nguyen@northwind.com,+1-555-7544,Austin,TX,USA,SaaS,VP,200
+Grace,Nguyen,Head of Growth,Cobalt Health,grace.nguyen@cobalt.com,+1-555-8962,Austin,TX,USA,Logistics,VP,5000
+Kenji,Bauer,Founder,Sunrise Textiles,kenji.bauer@redwood.com,+1-555-5597,Madrid,MD,Spain,Retail,Manager,200
+Amara,Moreno,Founder,Redwood Ceramics,amara.moreno@acme.com,+1-555-7523,Berlin,BE,Germany,Retail,Manager,5000
+Diego,Moreno,Founder,Sunrise Textiles,diego.moreno@redwood.com,+1-555-5946,Lagos,LA,Nigeria,Manufacturing,Director,50
+Priya,Bauer,Head of Growth,Cobalt Health,priya.bauer@northwind.com,+1-555-8849,Madrid,MD,Spain,Retail,VP,200
+Diego,Okoro,Account Executive,Cobalt Health,diego.okoro@vertex.com,+1-555-4973,Toronto,ON,Canada,Logistics,C-Suite,50

@@ -1,0 +1,182 @@
+{
+  "cryptic_abbrev.csv": {
+    "fnm": [
+      "first_name",
+      "alias"
+    ],
+    "lnm": [
+      "last_name",
+      "alias"
+    ],
+    "eml": [
+      "email",
+      "alias"
+    ],
+    "tel_no": [
+      "phone",
+      "alias"
+    ],
+    "cmpy": [
+      "company",
+      "semantic"
+    ],
+    "cntry": [
+      "country",
+      "alias"
+    ],
+    "amt_paid": [
+      "amount",
+      "alias"
+    ],
+    "cust_id": [
+      "identifier",
+      "alias"
+    ]
+  },
+  "multilingual.csv": {
+    "nombre": [
+      "full_name",
+      "semantic"
+    ],
+    "correo": [
+      "email",
+      "semantic"
+    ],
+    "telefono": [
+      "phone",
+      "semantic"
+    ],
+    "pais": [
+      "country",
+      "semantic"
+    ],
+    "empresa": [
+      "company",
+      "semantic"
+    ],
+    "ciudad": [
+      "city",
+      "semantic"
+    ],
+    "edad": [
+      "age",
+      "semantic"
+    ]
+  },
+  "synonyms.csv": {
+    "surname": [
+      "last_name",
+      "semantic"
+    ],
+    "given_name": [
+      "first_name",
+      "semantic"
+    ],
+    "mobile_number": [
+      "phone",
+      "semantic"
+    ],
+    "organisation": [
+      "company",
+      "alias"
+    ],
+    "town": [
+      "city",
+      "alias"
+    ],
+    "occupation": [
+      "job_title",
+      "alias"
+    ],
+    "sum_owed": [
+      "amount",
+      "semantic"
+    ]
+  },
+  "traps.csv": {
+    "carrier": [
+      "carrier",
+      "identity"
+    ],
+    "account_ref": [
+      "identifier",
+      "identity"
+    ],
+    "title": [
+      "title",
+      "identity"
+    ],
+    "region_manager": [
+      "region_manager",
+      "identity"
+    ],
+    "book": [
+      "book",
+      "identity"
+    ],
+    "plan": [
+      "plan",
+      "identity"
+    ],
+    "rate": [
+      "rate",
+      "identity"
+    ]
+  },
+  "type_ambiguity.csv": {
+    "record_no": [
+      "identifier",
+      "alias"
+    ],
+    "when": [
+      "date",
+      "identity"
+    ],
+    "active": [
+      "active",
+      "identity"
+    ],
+    "zip": [
+      "postal_code",
+      "alias"
+    ],
+    "ccy": [
+      "currency",
+      "alias"
+    ],
+    "gross_pay": [
+      "amount",
+      "semantic"
+    ]
+  },
+  "novel_domain.csv": {
+    "vin": [
+      "vin",
+      "identity"
+    ],
+    "isbn": [
+      "isbn",
+      "identity"
+    ],
+    "iban": [
+      "iban",
+      "identity"
+    ],
+    "imei": [
+      "imei",
+      "identity"
+    ],
+    "sku": [
+      "sku",
+      "identity"
+    ],
+    "hs_code": [
+      "hs_code",
+      "identity"
+    ],
+    "tail_number": [
+      "tail_number",
+      "identity"
+    ]
+  }
+}

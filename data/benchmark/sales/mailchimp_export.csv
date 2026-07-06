@@ -1,0 +1,33 @@
+Email Address,First Name,Last Name,Company,Phone,Address,MEMBER_RATING,OPTIN_TIME,TAGS
+priya.bauer@northwind.com,Priya,Bauer,Cobalt Health,+1-555-8849,956 Main St,5,2022-01-01,cold
+sofia.khan@cobalt.com,Sofia,Khan,Acme Analytics,+1-555-4501,885 Elm St,1,2023-08-16,cold
+ivan.bauer@redwood.com,Ivan,Bauer,Vertex Robotics,+1-555-4732,642 Main St,3,2024-04-25,cold
+amara.nguyen@acme.com,Amara,Nguyen,Acme Analytics,+1-555-7929,165 Oak St,5,2023-09-10,cold
+kenji.bauer@redwood.com,Kenji,Bauer,Sunrise Textiles,+1-555-5597,958 Main St,2,2022-06-26,hot
+wei.silva@vertex.com,Wei,Silva,Redwood Ceramics,+1-555-6650,468 Oak St,3,2023-05-07,cold
+amara.costa@meridian.com,Amara,Costa,Acme Analytics,+1-555-9673,948 Elm St,5,2022-10-26,hot
+leila.silva@northwind.com,Leila,Silva,Redwood Ceramics,+1-555-3287,316 Oak St,3,2023-08-19,cold
+marcus.silva@northwind.com,Marcus,Silva,Blue Harbor Foods,+1-555-2713,255 Main St,2,2023-02-24,cold
+wei.reddy@northwind.com,Wei,Reddy,Northwind Traders,+1-555-1946,609 Main St,5,2024-01-24,cold
+kenji.silva@meridian.com,Kenji,Silva,Blue Harbor Foods,+1-555-1348,809 Oak St,4,2024-10-08,cold
+sofia.nguyen@redwood.com,Sofia,Nguyen,Cobalt Health,+1-555-4125,880 Elm St,2,2023-05-02,warm
+noah.bauer@cobalt.com,Noah,Bauer,Sunrise Textiles,+1-555-3721,810 Oak St,1,2024-09-28,cold
+amara.costa@cobalt.com,Amara,Costa,Sunrise Textiles,+1-555-7668,167 Main St,4,2023-11-08,cold
+ivan.costa@meridian.com,Ivan,Costa,Cobalt Health,+1-555-4388,361 Main St,3,2022-07-20,hot
+noah.okoro@sunrise.com,Noah,Okoro,Blue Harbor Foods,+1-555-3786,796 Elm St,3,2022-03-03,hot
+wei.costa@vertex.com,Wei,Costa,Redwood Ceramics,+1-555-1320,887 Oak St,4,2022-11-02,hot
+grace.nguyen@cobalt.com,Grace,Nguyen,Cobalt Health,+1-555-8962,363 Elm St,1,2022-08-11,warm
+leila.tanaka@northwind.com,Leila,Tanaka,Vertex Robotics,+1-555-1151,61 Oak St,1,2022-06-09,cold
+diego.okoro@vertex.com,Diego,Okoro,Cobalt Health,+1-555-4973,833 Oak St,2,2024-09-23,warm
+ivan.costa@sunrise.com,Ivan,Costa,Meridian Systems,+1-555-2553,312 Main St,2,2022-11-10,hot
+sofia.khan@cobalt.com,Sofia,Khan,Acme Analytics,+1-555-4812,975 Elm St,3,2023-12-04,cold
+amara.moreno@acme.com,Amara,Moreno,Redwood Ceramics,+1-555-7523,380 Oak St,5,2022-05-07,hot
+wei.kovac@cobalt.com,Wei,Kovac,Vertex Robotics,+1-555-9736,622 Oak St,3,2023-03-20,hot
+diego.costa@sunrise.com,Diego,Costa,Cobalt Health,+1-555-3508,209 Main St,1,2023-02-25,cold
+diego.moreno@redwood.com,Diego,Moreno,Sunrise Textiles,+1-555-5946,888 Main St,2,2022-01-25,warm
+mei.nguyen@northwind.com,Mei,Nguyen,Sunrise Textiles,+1-555-7544,746 Main St,5,2023-04-23,warm
+elena.silva@acme.com,Elena,Silva,Blue Harbor Foods,+1-555-9326,207 Elm St,5,2022-02-20,cold
+ivan.silva@meridian.com,Ivan,Silva,Cobalt Health,+1-555-3872,838 Main St,2,2022-05-24,warm
+wei.nguyen@vertex.com,Wei,Nguyen,Cobalt Health,+1-555-8139,157 Elm St,5,2024-08-16,cold
+nadia.nguyen@cobalt.com,Nadia,Nguyen,Redwood Ceramics,+1-555-8883,734 Oak St,1,2023-04-10,hot
+sven.tanaka@vertex.com,Sven,Tanaka,Vertex Robotics,+1-555-2246,530 Main St,1,2024-12-15,cold
