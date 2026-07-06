@@ -138,7 +138,12 @@ class CollectionService @Inject constructor(
                 if (kv.isNotEmpty()) c.keyIndex[kv] = c.entities.size - 1
             }
         }
-        c.schema.forEach { (canon, agg) -> agg.count = c.entities.count { it[canon] != null } }
+        c.schema.forEach { (canon, agg) ->
+            agg.count = c.entities.count { it[canon] != null }
+            // a user-defined canonical's declared type governs the field everywhere (search dtypes,
+            // facets, display) — not just the detail view.
+            c.customCanonicals[canon]?.let { agg.osType = it }
+        }
         c.files.add(CollectionFileDto(filename, result.nRows, mapping))
         return mapping
     }
@@ -260,10 +265,9 @@ class CollectionService @Inject constructor(
         val schema = c.schema.entries
             .sortedWith(compareBy({ -it.value.sources.size }, { it.key }))
             .map { (field, a) ->
-                // a defined custom canonical governs its field's type
-                val osType = c.customCanonicals[field] ?: a.osType
-                SchemaFieldDto(field, osType, a.kind, a.cardinality, a.sources.map { short(it) },
-                    a.sources.size, a.count, a.types.size > 1, facetValues(c, field, osType))
+                // a.osType already carries a custom canonical's declared type (applied at ingest)
+                SchemaFieldDto(field, a.osType, a.kind, a.cardinality, a.sources.map { short(it) },
+                    a.sources.size, a.count, a.types.size > 1, facetValues(c, field, a.osType))
             }
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
         val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, c.schema.containsKey(n)) }

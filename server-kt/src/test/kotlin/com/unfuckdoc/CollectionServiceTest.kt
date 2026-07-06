@@ -1,6 +1,7 @@
 package com.unfuckdoc
 
 import com.unfuckdoc.api.CollectionService
+import com.unfuckdoc.api.FieldFilter
 import com.unfuckdoc.domain.Canonicalizer
 import com.unfuckdoc.domain.Classifier
 import com.unfuckdoc.domain.Consolidator
@@ -105,6 +106,33 @@ class CollectionServiceTest {
             1,
         )!!
         assertEquals(1, bothFiles.count)
+    }
+
+    @Test
+    fun `custom canonical declared type governs search filtering`() {
+        val service = CollectionService(
+            Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
+            Consolidator(),
+            unavailableOpenSearch(),
+        )
+        service.create("deals", "email")
+        service.add(
+            "deals", "d.csv",
+            listOf("email", "spend"),
+            listOf(
+                mapOf("email" to "a@example.com", "spend" to "100"),
+                mapOf("email" to "b@example.com", "spend" to "300"),
+            ),
+        )
+        service.putCanonical("deals", "deal_size", "double")
+        service.setMapping("deals", "spend", "deal_size")
+
+        val detail = service.detail("deals")!!
+        // the declared type is what the field reports AND what search filters by
+        assertEquals("double", detail.schema.first { it.field == "deal_size" }.osType)
+
+        val res = service.search("deals", "", "", emptyList(), listOf(FieldFilter("deal_size", ">150")), 10, 1)!!
+        assertEquals(1, res.total, "range filter on a numeric custom canonical should match only spend>150")
     }
 
     private fun unavailableOpenSearch(): OpenSearchService {
