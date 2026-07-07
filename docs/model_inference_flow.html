@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: #1a1d24;
+    font-size: 10.5pt; line-height: 1.45; }
+  h1 { font-size: 20pt; margin: 0 0 2pt; }
+  h2 { font-size: 13pt; margin: 18pt 0 6pt; padding-bottom: 3pt; border-bottom: 2px solid #2f6fd0; color: #1a3a6b; }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; color: #2f6fd0; }
+  .sub { color: #5a6472; font-size: 10.5pt; margin: 0 0 4pt; }
+  p { margin: 4pt 0; }
+  code { background: #eef1f6; padding: 0.5pt 3pt; border-radius: 3px; font-size: 9pt; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0; font-size: 9.3pt; }
+  th { background: #eaf0fb; text-align: left; padding: 4pt 6pt; border: 1px solid #cdd8ea; }
+  td { padding: 4pt 6pt; border: 1px solid #dfe4ec; vertical-align: top; }
+  .code td { font-weight: 700; color: #b26a00; }
+  .llm { color: #7a3ea0; font-weight: 700; }
+  .emb { color: #1a7a52; font-weight: 700; }
+  .det { color: #444; }
+  .note { background: #fff8e6; border-left: 3px solid #e0a400; padding: 6pt 9pt; margin: 8pt 0; font-size: 9.6pt; }
+  .flow { border: 1px solid #cdd8ea; border-radius: 6px; padding: 8pt 10pt; margin: 6pt 0; background: #f7f9fc; }
+  .step { margin: 2pt 0; }
+  .tag { display: inline-block; font-size: 8pt; font-weight: 700; padding: 1pt 6pt; border-radius: 10px; margin-right: 5pt; }
+  .tag.e { background: #d9f0e5; color: #1a7a52; }
+  .tag.l { background: #eee0f7; color: #7a3ea0; }
+  .tag.d { background: #e6e9ee; color: #555; }
+  .legend span { margin-right: 14pt; font-size: 9pt; }
+  footer { margin-top: 14pt; color: #8a929e; font-size: 8pt; border-top: 1px solid #dfe4ec; padding-top: 5pt; }
+  .arrow { color: #9aa4b2; }
+</style>
+</head>
+<body>
+
+<h1>unfuckdoc — Model Inference Flow</h1>
+<p class="sub">When and where each AI model runs. Everything else is deterministic code.</p>
+<p class="legend">
+  <span><span class="tag e">EMBEDDER</span> vector model (nomic / MiniLM)</span>
+  <span><span class="tag l">LLM</span> qwen2.5 (generation / judgment)</span>
+  <span><span class="tag d">CODE</span> deterministic, no model</span>
+</p>
+
+<h2>1 · The guiding principle</h2>
+<p><b>Deterministic-first; models only on the ambiguous residual.</b> The pipeline does the exact,
+cheap, reproducible work (classify, merge, filter, count, aggregate). Models are used only where the
+task is fundamentally about <i>meaning</i> (embeddings) or <i>language / judgment</i> (the LLM), and
+they run as gated, cached steps — never per-row at query time.</p>
+
+<h2>2 · The two model types</h2>
+<table>
+  <tr><th>Model</th><th>Job</th><th>Produces</th><th>Runs</th></tr>
+  <tr><td class="emb">Embedder — nomic-embed-text (default) / all-MiniLM (fallback)</td>
+      <td>turn text into a vector of meaning</td><td>a float vector (768 / 384-d)</td><td>ingest + per query</td></tr>
+  <tr><td class="llm">LLM — qwen2.5:7b</td>
+      <td>read language, output structured JSON / judgment</td><td>JSON (attributes, query plan, classification)</td><td>ingest (extraction) + per question (planning)</td></tr>
+</table>
+
+<h2>3 · INGEST — runs once, ahead of any query</h2>
+<div class="flow">
+  <div class="step"><span class="tag d">CODE</span> parse file · classify column types · <b>canonicalize field names</b> (alias dictionary)</div>
+  <div class="step"><span class="tag e">EMBEDDER</span> <b>semantic field-name match</b> — <i>only</i> for names the dictionary can't place (gated; 0 on recognized data)</div>
+  <div class="step"><span class="tag d">CODE</span> merge / dedup entities by key · consolidate scalar vs array · enrichment joins</div>
+  <div class="step"><span class="tag e">EMBEDDER</span> <b>vectorize free-text fields</b> — one vector per entity, stored for semantic search (once)</div>
+  <div class="step"><span class="tag l">LLM</span> <b>attribute extraction</b> — read each description → typed fields (has_garden, property_type). Gated + cached per (text + schema)</div>
+</div>
+<p class="sub">Cost is paid once here. Queries are then cheap and exact.</p>
+
+<h2>4 · QUERY — runs per request</h2>
+<div class="flow">
+  <div class="step"><span class="tag l">LLM</span> <b>NL → query plan</b> <i>(planned)</i> — turn the plain-text question into filters / ranges / geo / tags / a semantic clause. One call per question.</div>
+  <div class="step"><span class="tag e">EMBEDDER</span> <b>RAG grounding</b> <i>(planned)</i> — retrieve the real fields + enum values relevant to the question, so the LLM can't hallucinate.</div>
+  <div class="step"><span class="tag e">EMBEDDER</span> <b>embed the query</b> — one small vector, if the plan includes a semantic clause.</div>
+  <div class="step"><span class="tag d">CODE</span> <b>semantic ranking</b> — cosine between the query vector and stored entity vectors (pure math, no model).</div>
+  <div class="step"><span class="tag d">CODE</span> <b>exact execution</b> — filters, ranges, geo (bbox / polygon), tags, enumeration, joins. Deterministic + auditable.</div>
+  <div class="step"><span class="tag d">CODE</span> return the dataset + cosine relevance scores.</div>
+</div>
+
+<h2>5 · Master reference — task → model → when</h2>
+<table>
+  <tr><th>Task</th><th>Model</th><th>Phase</th><th>Gated?</th></tr>
+  <tr><td>Column type classification</td><td class="det">CODE (statistical)</td><td>ingest</td><td>—</td></tr>
+  <tr><td>Field-name canonicalization (dictionary)</td><td class="det">CODE (alias table)</td><td>ingest</td><td>—</td></tr>
+  <tr><td>Field-name semantic match (residual)</td><td class="emb">EMBEDDER</td><td>ingest</td><td>yes — only unrecognized names</td></tr>
+  <tr><td>Merge / dedup / consolidation / enrichment</td><td class="det">CODE</td><td>ingest</td><td>—</td></tr>
+  <tr><td>Vectorize free text</td><td class="emb">EMBEDDER</td><td>ingest</td><td>once per entity, cached</td></tr>
+  <tr><td>Attribute extraction (has_garden, risk, …)</td><td class="llm">LLM</td><td>ingest</td><td>yes — per entity, cached</td></tr>
+  <tr><td>Embed the query</td><td class="emb">EMBEDDER</td><td>query</td><td>once per search</td></tr>
+  <tr><td>Semantic ranking (cosine)</td><td class="det">CODE</td><td>query</td><td>—</td></tr>
+  <tr><td>NL → structured query plan <i>(planned)</i></td><td class="llm">LLM</td><td>query</td><td>yes — once per question</td></tr>
+  <tr><td>RAG grounding (retrieve schema/values) <i>(planned)</i></td><td class="emb">EMBEDDER</td><td>query</td><td>once per question</td></tr>
+  <tr><td>Filters · ranges · geo · tags · enumeration · aggregation</td><td class="det">CODE</td><td>query</td><td>—</td></tr>
+</table>
+
+<div class="note">
+  <b>Numbers by code, judgment by the LLM.</b> For aggregate classification (e.g. "high/low loan
+  risk" from many financial records): compute the features deterministically (income, debt-to-income,
+  missed payments) with CODE, then hand the <i>summary</i> to the LLM for the judgment — never dump raw
+  rows into the model. For regulated decisions, keep an auditable scored model as the decider and use
+  the LLM to summarize / explain / flag.
+</div>
+
+<h2>6 · Deployment &amp; swapping models</h2>
+<p>Both models sit behind one interface each and are chosen by environment variable — any
+OpenAI-compatible endpoint works (local Ollama, OVH AI Endpoints, vLLM):</p>
+<table>
+  <tr><th>Env</th><th>Effect</th></tr>
+  <tr><td><code>EMBED_BASE_URL</code> / <code>EMBED_MODEL</code></td><td>use a remote embedder (else in-process MiniLM)</td></tr>
+  <tr><td><code>LLM_BASE_URL</code> / <code>LLM_MODEL</code></td><td>enable the LLM (else attribute extraction is off)</td></tr>
+  <tr><td><code>UNFUCK_NO_EMBED=1</code></td><td>disable embeddings entirely (deterministic-only)</td></tr>
+</table>
+<p class="sub">Local dev today: nomic-embed-text + qwen2.5:7b on Ollama (<code>http://localhost:11434/v1</code>), Metal-accelerated. Prod option: OVH AI Endpoints, EU-resident.</p>
+
+<footer>unfuckdoc — model inference flow · EMBEDDER = nomic/MiniLM · LLM = qwen2.5 · everything else is deterministic code</footer>
+
+</body>
+</html>
