@@ -49,6 +49,12 @@ data class GeoPointsResponse(val field: String, val points: List<GeoPoint>)
 @Serializable
 data class CustomCanonical(val name: String, val osType: String, val array: Boolean = false, val inUse: Boolean = false)
 
+/** A lookup/enrichment join: for each entity, find a row in `source` where `joinField` matches and
+ *  attach that row's other canonical fields (e.g. join people to a location table on `city` to
+ *  attach `location` coords). Entities keep their identity; they gain the attached fields. */
+@Serializable
+data class EnrichmentJoin(val source: String, val joinField: String, val attached: List<String>, val matched: Int)
+
 @Serializable
 data class CollectionDetail(
     val name: String, val index: String, val nRecords: Int,
@@ -58,6 +64,7 @@ data class CollectionDetail(
     val tags: List<CollectionTag> = emptyList(),
     val customCanonicals: List<CustomCanonical> = emptyList(),
     val semanticSearch: Boolean = false,   // vector search available (embeddings on + a free-text field)
+    val enrichments: List<EnrichmentJoin> = emptyList(),
 )
 
 @Serializable

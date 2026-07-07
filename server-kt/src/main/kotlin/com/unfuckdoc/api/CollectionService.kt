@@ -31,6 +31,8 @@ class CollectionService @Inject constructor(
         val types = mutableSetOf<String?>()
     }
     private class RawFile(val name: String, val headers: List<String>, val rows: List<Map<String, String?>>)
+    private class Enrich(val source: String, val joinField: String, val headers: List<String>,
+                         val rows: List<Map<String, String?>>) { var attached: List<String> = emptyList(); var matched = 0 }
     private class Collection(val name: String, val index: String, var keyField: String) {
         val rawFiles = mutableListOf<RawFile>()                     // retained so a re-map can rebuild
         val overrides = LinkedHashMap<String, String>()             // raw column name -> forced canonical
@@ -41,6 +43,7 @@ class CollectionService @Inject constructor(
         val segments = mutableListOf<Pair<String, List<FieldFilter>>>()   // named filtered views
         val customCanonicals = LinkedHashMap<String, String>()            // user-defined canonical -> osType
         val customArrays = LinkedHashSet<String>()                        // customs declared multi-value (list)
+        val enrichments = mutableListOf<Enrich>()                         // lookup joins: attach fields from a reference
         var vectors: List<FloatArray>? = null      // per-entity embeddings of the free-text field(s); lazy
         var rawRecords = 0
         var merged = 0
@@ -95,6 +98,7 @@ class CollectionService @Inject constructor(
 
         c.rawFiles.add(RawFile(filename, headers, rows))
         val mapping = ingest(c, filename, headers, rows)
+        if (c.enrichments.isNotEmpty()) applyEnrichments(c)   // re-attach lookups to the new entities
         c.opensearch = reindex(c)
         return CollectionAddResponse(added = short(filename), mapping = mapping, detail = detail(c))
     }
@@ -119,11 +123,60 @@ class CollectionService @Inject constructor(
         return detail(c)
     }
 
-    /** Re-run classify -> (override-aware) canonicalize -> merge over every retained file. */
+    /** Add a lookup/enrichment join: attach fields from `source` onto entities whose `joinField`
+     *  matches. `joinField` must be a canonical present in both the collection and the reference. */
+    fun addEnrichment(name: String, source: String, joinField: String, headers: List<String>, rows: List<Map<String, String?>>): CollectionAddResponse {
+        val c = collections[name] ?: return CollectionAddResponse(error = "unknown collection")
+        val refUnified = consolidator.consolidate(rows, pipeline.process(source, headers, rows).columns).unified.map { it.canonical }
+        if (joinField !in refUnified) return CollectionAddResponse(error = "$source has no '$joinField' field to join on")
+        if (joinField !in c.schema.keys) return CollectionAddResponse(error = "collection has no '$joinField' field")
+        c.enrichments.removeAll { it.source == source }
+        c.enrichments.add(Enrich(source, joinField, headers, rows))
+        rebuild(c); c.opensearch = reindex(c)
+        return CollectionAddResponse(added = short(source), detail = detail(c))
+    }
+
+    fun removeEnrichment(name: String, source: String): CollectionDetail? {
+        val c = collections[name] ?: return null
+        c.enrichments.removeAll { it.source == source || short(it.source) == source }
+        rebuild(c); c.opensearch = reindex(c)
+        return detail(c)
+    }
+
+    /** Attach reference fields onto each entity whose join value matches (non-overwrite). */
+    private fun applyEnrichments(c: Collection) {
+        for (en in c.enrichments) {
+            val cons = consolidator.consolidate(en.rows, pipeline.process(en.source, en.headers, en.rows).columns)
+            val lookup = HashMap<String, Map<String, Any?>>()
+            for (doc in cons.docs) {
+                val jv = Docs.normKey(doc[en.joinField], en.joinField)
+                if (jv.isNotEmpty()) lookup.putIfAbsent(jv, doc.filterKeys { it != en.joinField && !it.startsWith("_") })
+            }
+            en.attached = cons.unified.map { it.canonical }.filter { it != en.joinField }
+            // register attached fields in the schema (typed from the reference) so they're searchable/geo
+            for (u in cons.unified.filter { it.canonical != en.joinField }) {
+                val agg = c.schema.getOrPut(u.canonical) { Agg(u.osType, u.kind, u.cardinality) }
+                if (en.source !in agg.sources) agg.sources.add(en.source)
+            }
+            var matched = 0
+            for (e in c.entities) {
+                val attrs = lookup[Docs.normKey(e[en.joinField], en.joinField)] ?: continue
+                var any = false
+                for ((k, v) in attrs) if (v != null && e[k] == null) { e[k] = v; any = true }
+                if (any) matched++
+            }
+            en.matched = matched
+        }
+        c.schema.forEach { (canon, agg) -> agg.count = c.entities.count { it[canon] != null } }
+        c.vectors = null
+    }
+
+    /** Re-run classify -> (override-aware) canonicalize -> merge over every retained file, then joins. */
     private fun rebuild(c: Collection) {
         c.schema.clear(); c.files.clear(); c.entities.clear(); c.keyIndex.clear()
         c.rawRecords = 0; c.merged = 0
         for (rf in c.rawFiles) ingest(c, rf.name, rf.headers, rf.rows)
+        applyEnrichments(c)
     }
 
     /** Process one file (honouring overrides) and dedup-merge its records into the collection. */
@@ -374,9 +427,10 @@ class CollectionService @Inject constructor(
             }
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
         val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, n in c.customArrays, c.schema.containsKey(n)) }
+        val enrichments = c.enrichments.map { EnrichmentJoin(short(it.source), it.joinField, it.attached, it.matched) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,
             schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch,
-            collectionTags(c), custom, embedder.enabled && textFields(c).isNotEmpty())
+            collectionTags(c), custom, embedder.enabled && textFields(c).isNotEmpty(), enrichments)
     }
 
     private val wordRe = Regex("[A-Za-z][A-Za-z0-9'-]{2,}")

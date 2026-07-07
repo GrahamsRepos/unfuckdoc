@@ -2,6 +2,7 @@ package com.unfuckdoc
 
 import com.unfuckdoc.api.CollectionService
 import com.unfuckdoc.api.FieldFilter
+import com.unfuckdoc.api.GeoFilter
 import com.unfuckdoc.domain.Canonicalizer
 import com.unfuckdoc.domain.Classifier
 import com.unfuckdoc.domain.Consolidator
@@ -236,6 +237,35 @@ class CollectionServiceTest {
         // keyword mode with the same term finds nothing (no literal match) — proving it's really semantic
         val kw = service.search("props", "backyard", "", emptyList(), emptyList(), 10, 1, null, "keyword")!!
         assertEquals(0, kw.total)
+    }
+
+    @Test
+    fun `enrichment join attaches reference fields by a shared field, enabling geo search`() {
+        val service = CollectionService(
+            Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
+            Consolidator(), unavailableOpenSearch(), NoopEmbedder,
+        )
+        service.create("ppl", "email")
+        service.add("ppl", "people.csv", listOf("email", "city"), listOf(
+            mapOf("email" to "a@x.com", "city" to "London"),
+            mapOf("email" to "b@x.com", "city" to "Paris"),
+            mapOf("email" to "c@x.com", "city" to "Tokyo"),
+        ))
+        // join a location reference on city -> attach its coordinates (canonical `location`, geo_point)
+        val resp = service.addEnrichment("ppl", "city_coords.csv", "city",
+            listOf("city", "coordinates"), listOf(
+                mapOf("city" to "London", "coordinates" to "51.5074,-0.1278"),
+                mapOf("city" to "Paris", "coordinates" to "48.8566,2.3522"),
+            ))
+        val det = resp.detail!!
+        assertEquals(listOf("location"), det.enrichments.first().attached)
+        assertEquals("geo_point", det.schema.first { it.field == "location" }.osType)
+
+        // people now carry coords -> a bbox around London finds the London person (Paris/Tokyo outside)
+        val res = service.search("ppl", "", "", emptyList(), emptyList(), 10, 1,
+            GeoFilter("location", bbox = listOf(50.0, -5.0, 55.0, 5.0)))!!
+        assertEquals(1, res.total)
+        assertEquals("London", res.results.single()["city"])
     }
 
     @Test

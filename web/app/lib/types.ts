@@ -135,11 +135,13 @@ export interface CollectionTag { tag: string; count: number; }
 export interface CustomCanonical { name: string; os_type: string; array: boolean; in_use: boolean; }
 export interface GeoPoint { lat: number; lng: number; label: string; }
 export interface GeoFilter { field: string; bbox?: number[]; polygon?: number[][]; }
+export interface EnrichmentJoin { source: string; join_field: string; attached: string[]; matched: number; }
 export interface CollectionDetail {
   name: string; index: string; n_records: number;
   key_field: string; raw_records: number; merged: number;
   schema: SchemaField[]; files: CollectionFile[]; segments: Segment[]; opensearch: OsStatus;
   tags: CollectionTag[]; custom_canonicals: CustomCanonical[]; semantic_search: boolean;
+  enrichments: EnrichmentJoin[];
 }
 export interface CollectionSearchResponse {
   display: string[]; count: number; total: number; page: number; page_size: number;
