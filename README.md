@@ -1,66 +1,97 @@
 # unfuckdoc
 
-Turn **any messy CSV** into a searchable OpenSearch index — with **minimal LLM**.
+Turn a pile of **messy, differently-shaped files** into one **unified, searchable, segmentable
+entity store** — with a **deterministic-first** engine and **gated, self-hosted open models**.
 
+> **Continuing in Claude Code?** Read `CLAUDE.md` first — project context, current state, next steps.
 
-> **Continuing in Claude Code?** Read `CLAUDE.md` first — it's the project context, current state, and next steps.
+You dump CSVs (even with different column names, partial fields, duplicate people); it standardises
+each column to a **canonical field**, **merges** records that share a key into one entity, and makes
+the result filterable by **tags, ranges, geo, and meaning**. Fuzzy questions use **vector search**;
+logic and negation ("no garden") use **LLM-extracted structured attributes**; everything expensive is
+**gated** so the common path is cheap and deterministic.
 
-It infers each field's type from a statistical sample, cleans it (null-aware), routes primitives
-to typed OpenSearch fields, and for **free-text** columns it **summarises, extracts keywords, and
-vectorises** them — then serves **semantic + keyword + hybrid** search. An LLM is only ever called
-on the *ambiguous residual*, and every escalation is counted so the cost stays visible (on the
-bundled real-world dataset: **0 LLM calls**).
+## Two apps (+ a reference POC)
 
-## Quickstart
+| Dir | What | Stack |
+|---|---|---|
+| **`server-kt/`** | the engine + API (go-forward backend) | Kotlin · Ktor · Guice · OpenSearch · DJL |
+| **`web/`** | the UI (SSR) | React Router v7 · TypeScript |
+| `src/` | the original Python POC (reference only — not extended) | pandas · scikit-learn |
+
+## The collection workflow
+
+A **collection** is the unit of work — dump files, get one deduped, standardised, queryable set:
+
+```
+① Sources    dump files → merge/dedup entities by a key (email/id/…)
+② Canonical  standardise columns → your unified fields · transforms · custom canonicals · LLM attributes
+③ Enrich     join other collections/files on a shared field to gain their fields (1:1 / 1:many)
+④ Explore    search · tags · ranges · geo (map) · semantic · saved segments
+```
+
+## The four ways a field is produced (one engine, four methods)
+
+| Method | For | Model? |
+|---|---|---|
+| **Deterministic** — classify types, canonicalize names (alias dict + semantic), merge/dedup, safe-DSL **transforms** | structure, cleaning, unification | no |
+| **Vectors** — embed free text, kNN/cosine semantic search | tagging / "similar by meaning" | embedder (nomic / MiniLM) |
+| **LLM** — read text → structured attributes / judgment (handles negation, reasoning) | logic the vectors can't do | LLM (qwen2.5) |
+| *(planned)* **Aggregate** — group one-to-many → counts/sums/ratios | scores | no |
+
+**Guiding principle: deterministic-first, models only on the ambiguous residual, always gated + counted.**
+
+## Quickstart (all local, all free models)
+
+> Detailed step-by-step (prerequisites, Ollama, env vars, troubleshooting): **[`SETUP.md`](SETUP.md)**.
 
 ```bash
-pip install -r requirements.txt
+# 1. OpenSearch (index) — single-node dev cluster
+docker compose up -d                               # :9200, security off (dev only)
 
-# 1. (optional) grab the real messy demo dataset — 130k wine reviews
-python3 src/fetch_wine.py                       # a 2000-row sample is already in data/wine.csv
+# 2. models via Ollama (Apple Silicon: run natively for Metal GPU)
+brew install ollama && brew services start ollama
+ollama pull nomic-embed-text                        # embeddings (semantic search)
+ollama pull qwen2.5:7b                               # LLM (attribute extraction / reasoning)
 
-# 2. classify + clean + enrich -> OpenSearch-ready artifacts + a LIVE offline search demo
-python3 src/clean_and_enrich.py data/wine.csv   # writes wine_catalog/mapping/bulk.json + embedder.pkl
+# 3. backend — wire both models via env (else in-process MiniLM + no LLM)
+cd server-kt && PORT=8080 \
+  EMBED_BASE_URL=http://localhost:11434/v1 EMBED_MODEL=nomic-embed-text \
+  LLM_BASE_URL=http://localhost:11434/v1   LLM_MODEL=qwen2.5:7b \
+  ./gradlew run                                      # http://localhost:8080
 
-# 3. real OpenSearch in Docker, then load + search
-docker compose up -d                            # single-node OpenSearch on :9200 (security off, dev)
-python3 src/load_and_search.py                  # create index, bulk load, run 3 search modes
+# 4. frontend
+cd web && npm install && npm run dev                 # http://localhost:3000  → talks to :8080
 ```
 
-## What it does
+Open **http://localhost:3000/collections**, create a collection, and dump a file from `data/samples/`.
 
-| Field kind | OpenSearch | Handling |
-|---|---|---|
-| numeric / date / boolean | double / date / boolean | typed, coerced (`$`,`,` stripped) |
-| enum (low-card) / identifier | keyword | facet / exact-match |
-| **free_text** (many words) | text | **`_summary` + `_keywords[]` + `_vector` (kNN/HNSW)** |
-| junk (row index, empty) | — | flagged not-searchable |
+## Search modes
 
-- **Minimal LLM** — deterministic classifier with a confidence-margin gate; `llm_classify()` fires
-  only below the margin and is counted. Swap the stub for a real constrained call.
-- **Null-aware** — sparse columns stay first-class (`fill_rate` recorded); nulls are coverage, not junk.
-- **Offline stand-ins, swappable** — vectorise = TF-IDF+LSA (→ sentence-transformers / OpenAI /
-  Voyage); summarise = extractive TextRank (→ LLM); keywords = YAKE.
+- **Keyword** — punctuation/order-independent term match.
+- **Tags / enumeration** — two-stage: pick field(s) → pick values (low-card keyword/boolean fields).
+- **Ranges** — numeric/date (`>100000`, `2024-01-01..2024-06-30`).
+- **Geo** — `geo_point` fields; draw a rectangle/polygon on a Leaflet map, or bbox filter.
+- **Semantic** — vector cosine over free text; results show a per-row **relevance bar**.
 
-## Layout
+## Models & config
 
-```
-src/   clean_and_enrich.py   any CSV -> clean -> enrich -> OpenSearch-ready + live search demo
-       load_and_search.py    load into Docker OpenSearch, run semantic/keyword/hybrid
-       fetch_wine.py         download the real dirty demo dataset
-       infer_pipeline.py     simpler inference-only variant
-       partition_planner.py  balanced enum-sharding planner (for large tenants)
-       make_bios.py          synthetic demo data generator
-data/  wine.csv              bundled 2000-row messy sample (runs offline)
-docs/  design notes (pipeline, interoperability & reliability, findings) in md + pdf
-docker-compose.yml           single-node OpenSearch for local dev
-```
+Both models sit behind one interface each, chosen by env var — any OpenAI-compatible endpoint (local
+Ollama, **OVH AI Endpoints** (EU), vLLM, OpenRouter):
 
-## The three search modes (`src/load_and_search.py`)
+| Env | Effect |
+|---|---|
+| `EMBED_BASE_URL` / `EMBED_MODEL` | remote embedder (else in-process `all-MiniLM-L6-v2` via DJL) |
+| `LLM_BASE_URL` / `LLM_MODEL` | enable the LLM (else extraction is off) |
+| `UNFUCK_NO_EMBED=1` | disable embeddings entirely (deterministic-only) |
 
-1. **Semantic** — kNN over `description_vector` ("dark chocolate and bold tannins" → Cabernets).
-2. **Keyword-tag + primitive filter** — `country=Italy AND points>=92 AND keyword="black cherry"`.
-3. **Hybrid** — BM25 on `description_summary` + kNN, RRF-fused.
+See `docs/model_inference_flow.pdf` for exactly when/where each model runs.
+
+## Docs
+
+`docs/` — `platform_expansion_plan.md` (JSON/SQL sources, multi-tenancy, export), `benchmark.md`
+(canonical-inference accuracy harness), `model_inference_flow.pdf`, plus the original design docs
+(`FINDINGS.md`, `ingestion_plan`, `interoperability_reliability_layer`).
 
 ## License
 
