@@ -284,6 +284,22 @@ class CollectionService @Inject constructor(
     private fun sourceFiles(entity: Map<String, Any?>): List<String> =
         sources(entity).map { short(it) }.distinct().sorted()
 
+    /** All plottable [lat,lng] points (with a label) for a geo field — for the map. */
+    fun geoPoints(name: String, field: String, limit: Int): List<GeoPoint>? {
+        val c = collections[name] ?: return null
+        val out = ArrayList<GeoPoint>()
+        for (d in c.entities) {
+            val p = Docs.fieldValues(d[field]).firstNotNullOfOrNull { Docs.parseLatLng(it) } ?: continue
+            val label = Docs.rowName(d).ifBlank {
+                listOf("city", "company", "email", "identifier").firstNotNullOfOrNull { k -> Docs.flattenText(d[k]).ifBlank { null } }
+                    ?: field
+            }
+            out.add(GeoPoint(p.first, p.second, label))
+            if (out.size >= limit) break
+        }
+        return out
+    }
+
     /** True if any coordinate value of the entity's geo field falls in the bbox / polygon. */
     private fun geoMatch(value: Any?, geo: GeoFilter, poly: List<Pair<Double, Double>>?): Boolean {
         val points = Docs.fieldValues(value).mapNotNull { Docs.parseLatLng(it) }

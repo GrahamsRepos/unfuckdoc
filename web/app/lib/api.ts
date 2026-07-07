@@ -67,6 +67,9 @@ export const api = {
   },
   searchCollection: (name: string, body: unknown) =>
     postJson<CollectionSearchResponse>(`/api/collections/${encodeURIComponent(name)}/search`, body),
+  geoPoints: (name: string, field: string) =>
+    get<{ field: string; points: import("./types").GeoPoint[] }>(
+      `/api/collections/${encodeURIComponent(name)}/geo?field=${encodeURIComponent(field)}`),
 
   matchCandidates: (a: string, b: string) => postJson<{ keys: MatchKey[] }>("/api/match_candidates", { a, b }),
   match: (body: unknown) => postJson<MatchResult>("/api/match", body),

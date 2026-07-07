@@ -4,12 +4,28 @@ import { api } from "~/lib/api";
 import type { CollectionDetail } from "~/lib/types";
 import { Segments } from "~/components/Segments";
 import { CollectionSearchPanel } from "~/components/CollectionSearchPanel";
+import { GeoMap } from "~/components/GeoMap";
+import type { GeoFilter } from "~/lib/types";
 
 function parseFilters(p: URLSearchParams) {
   return p.getAll("f").map((s) => {
     const i = s.indexOf(":");
     return { field: s.slice(0, i), value: s.slice(i + 1) };
   });
+}
+
+function parseGeo(p: URLSearchParams, field: string | undefined): GeoFilter | undefined {
+  const g = p.get("geo");
+  if (!g || !field) return undefined;
+  if (g.startsWith("bbox:")) {
+    const n = g.slice(5).split(",").map(Number);
+    if (n.length === 4 && n.every((x) => !Number.isNaN(x))) return { field, bbox: n };
+  }
+  if (g.startsWith("poly:")) {
+    const poly = g.slice(5).split(";").map((pt) => pt.split(",").map(Number)).filter((a) => a.length === 2 && a.every((x) => !Number.isNaN(x)));
+    if (poly.length >= 3) return { field, polygon: poly };
+  }
+  return undefined;
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {
@@ -19,13 +35,16 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const sourceFiles = p.getAll("source_file");
   const page = Math.max(1, Number.parseInt(p.get("page") ?? "1", 10) || 1);
   const size = Math.max(1, Number.parseInt(p.get("size") ?? "30", 10) || 30);
-  // empty search is match-any: browse all, narrowed by any tag/segment/filter
+  const geoField = detail.schema.find((s) => s.os_type === "geo_point")?.field;
+  const geo = parseGeo(p, geoField);
+  // empty search is match-any: browse all, narrowed by any tag/segment/filter/area
   const search = detail.n_records > 0
     ? await api.searchCollection(params.name, {
-      q: p.get("q") ?? "", tag: p.get("tag") ?? "", source_files: sourceFiles, filters, size, page,
+      q: p.get("q") ?? "", tag: p.get("tag") ?? "", source_files: sourceFiles, filters, size, page, geo,
     })
     : null;
-  return { search, filters };
+  const geoData = geoField ? await api.geoPoints(params.name, geoField) : null;
+  return { search, filters, geoField, points: geoData?.points ?? [] };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -45,7 +64,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Explore({ loaderData, params }: Route.ComponentProps) {
-  const { search, filters } = loaderData;
+  const { search, filters, geoField, points } = loaderData;
   const parent = useRouteLoaderData("routes/collection") as { detail: CollectionDetail };
   const { detail } = parent;
   const base = `/collections/${encodeURIComponent(params.name)}`;
@@ -74,6 +93,7 @@ export default function Explore({ loaderData, params }: Route.ComponentProps) {
           </div>
         </section>
       )}
+      {geoField && points.length > 0 && <GeoMap points={points} field={geoField} />}
       <CollectionSearchPanel detail={detail} search={search} />
     </>
   );

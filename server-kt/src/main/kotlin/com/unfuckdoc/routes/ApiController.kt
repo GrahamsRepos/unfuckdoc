@@ -4,6 +4,7 @@ import com.unfuckdoc.api.CollectionService
 import com.unfuckdoc.api.DatasetService
 import com.unfuckdoc.api.FieldFilter
 import com.unfuckdoc.api.GeoFilter
+import com.unfuckdoc.api.GeoPointsResponse
 import com.unfuckdoc.api.MatchService
 import com.unfuckdoc.domain.CsvReader
 import io.ktor.http.ContentType
@@ -153,6 +154,14 @@ class ApiController @Inject constructor(
             val req = call.receive<CollectionSearchRequest>()
             call.respond(collections.search(call.parameters["name"]!!, req.q, req.tag, req.sourceFiles, req.filters, req.size, req.page, req.geo)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
+        }
+
+        get("/api/collections/{name}/geo") {
+            val field = call.request.queryParameters["field"] ?: "location"
+            val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 5000
+            val points = collections.geoPoints(call.parameters["name"]!!, field, limit)
+                ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection"))
+            call.respond(GeoPointsResponse(field, points))
         }
 
         post("/api/collections/{name}/segments") {

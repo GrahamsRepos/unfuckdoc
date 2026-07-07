@@ -37,6 +37,12 @@ data class GeoFilter(
     val field: String, val bbox: List<Double>? = null, val polygon: List<List<Double>>? = null,
 )
 
+@Serializable
+data class GeoPoint(val lat: Double, val lng: Double, val label: String)
+
+@Serializable
+data class GeoPointsResponse(val field: String, val points: List<GeoPoint>)
+
 /** A user-defined canonical field: a named target (with a declared type) that columns can be mapped
  *  onto, offered in the mapping dropdowns alongside the built-in canonicals. `array` = multi-value:
  *  the field holds a list (delimited cells are split; multiple columns/files union). */
