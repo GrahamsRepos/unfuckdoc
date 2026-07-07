@@ -1,28 +1,26 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import type { GeoPoint } from "~/lib/types";
 import "leaflet/dist/leaflet.css";
-import "leaflet-draw/dist/leaflet.draw.css";
 
-/** Client-only Leaflet map: plots the collection's geo points and lets you draw a rectangle or
- *  polygon to filter by area. The drawn shape is encoded into the `geo`/`geofield` URL params, which
- *  the Explore loader turns into a GeoFilter — so the map and the results/segments stay in sync. */
+/** Client-only Leaflet map: plots the collection's located entities and lets you drag a rectangle to
+ *  filter by area. The box is encoded into `geo`/`geofield` URL params (bbox:S,W,N,E), which the
+ *  Explore loader turns into a GeoFilter — so map, results, and segments stay in sync. Native mouse
+ *  drag is used (no leaflet-draw) for reliability. */
 export function GeoMap({ points, field }: { points: GeoPoint[]; field: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any>(null);
+  const drawState = useRef<{ armed: boolean; start: any; rect: any }>({ armed: false, start: null, rect: null });
   const [params, setParams] = useSearchParams();
-  // keep the latest params in a ref so the (once-only) draw handler always reads current state
   const paramsRef = useRef(params);
   paramsRef.current = params;
+  const [drawing, setDrawing] = useState(false);
 
-  // init the map once
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const L = (await import("leaflet")).default;
-      (window as any).L = L;                 // leaflet-draw (UMD) expects the global L
-      await import("leaflet-draw");
       if (cancelled || !ref.current || mapRef.current) return;
 
       const map = L.map(ref.current).setView([20, 0], 2);
@@ -30,29 +28,33 @@ export function GeoMap({ points, field }: { points: GeoPoint[]; field: string })
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors", maxZoom: 19,
       }).addTo(map);
-
       markersRef.current = L.featureGroup().addTo(map);
 
-      const drawn = new L.FeatureGroup();
-      map.addLayer(drawn);
-      const DrawCtl = (L as any).Control.Draw;
-      map.addControl(new DrawCtl({
-        draw: { rectangle: {}, polygon: {}, marker: false, circle: false, circlemarker: false, polyline: false },
-        edit: { featureGroup: drawn, edit: false },
-      }));
-      map.on((L as any).Draw.Event.CREATED, (e: any) => {
-        drawn.clearLayers();
-        drawn.addLayer(e.layer);
+      map.on("mousedown", (e: any) => {
+        const s = drawState.current;
+        if (!s.armed) return;
+        s.start = e.latlng;
+        if (s.rect) { s.rect.remove(); s.rect = null; }
+      });
+      map.on("mousemove", (e: any) => {
+        const s = drawState.current;
+        if (!s.armed || !s.start) return;
+        const bounds = L.latLngBounds(s.start, e.latlng);
+        if (s.rect) s.rect.setBounds(bounds);
+        else s.rect = L.rectangle(bounds, { color: "#4c9be8", weight: 1, fillOpacity: 0.1 }).addTo(map);
+      });
+      map.on("mouseup", (e: any) => {
+        const s = drawState.current;
+        if (!s.armed || !s.start) return;
+        const b = L.latLngBounds(s.start, e.latlng);
+        s.armed = false; s.start = null;
+        map.dragging.enable();
+        map.getContainer().style.cursor = "";
+        setDrawing(false);
         const np = new URLSearchParams(paramsRef.current);
         np.set("geofield", field);
+        np.set("geo", `bbox:${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`);
         np.set("page", "1");
-        if (e.layerType === "rectangle") {
-          const b = e.layer.getBounds();
-          np.set("geo", `bbox:${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`);
-        } else if (e.layerType === "polygon") {
-          const ring = e.layer.getLatLngs()[0].map((ll: any) => `${ll.lat},${ll.lng}`).join(";");
-          np.set("geo", `poly:${ring}`);
-        }
         setParams(np, { preventScrollReset: true });
       });
     })();
@@ -76,7 +78,17 @@ export function GeoMap({ points, field }: { points: GeoPoint[]; field: string })
     })();
   }, [points]);
 
+  function armDraw() {
+    const map = mapRef.current;
+    if (!map) return;
+    drawState.current.armed = true;
+    map.dragging.disable();
+    map.getContainer().style.cursor = "crosshair";
+    setDrawing(true);
+  }
   function clearArea() {
+    const s = drawState.current;
+    if (s.rect) { s.rect.remove(); s.rect = null; }
     const np = new URLSearchParams(params);
     np.delete("geo"); np.delete("geofield");
     setParams(np, { preventScrollReset: true });
@@ -84,9 +96,12 @@ export function GeoMap({ points, field }: { points: GeoPoint[]; field: string })
 
   return (
     <section className="card">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h3>Map <span className="mut">— {points.length} located; draw a ▭ or polygon to filter by area</span></h3>
-        {params.get("geo") && <button type="button" className="btn ghost" onClick={clearArea}>✕ clear area</button>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+        <h3>Map <span className="mut">— {points.length} located; {drawing ? "drag on the map to draw a box" : "draw a box to filter by area"}</span></h3>
+        <div className="fieldbar" style={{ gap: 8 }}>
+          <button type="button" className="btn ghost" onClick={armDraw} disabled={drawing}>▭ draw area</button>
+          {params.get("geo") && <button type="button" className="btn ghost" onClick={clearArea}>✕ clear area</button>}
+        </div>
       </div>
       <div ref={ref} style={{ height: 440, borderRadius: 8, overflow: "hidden", marginTop: 10 }} />
     </section>
