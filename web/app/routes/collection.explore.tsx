@@ -41,6 +41,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const search = detail.n_records > 0
     ? await api.searchCollection(params.name, {
       q: p.get("q") ?? "", tag: p.get("tag") ?? "", source_files: sourceFiles, filters, size, page, geo,
+      mode: p.get("mode") ?? "keyword",
     })
     : null;
   const geoData = geoField ? await api.geoPoints(params.name, geoField) : null;

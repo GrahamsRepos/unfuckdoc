@@ -5,6 +5,7 @@ import com.unfuckdoc.api.FieldFilter
 import com.unfuckdoc.domain.Canonicalizer
 import com.unfuckdoc.domain.Classifier
 import com.unfuckdoc.domain.Consolidator
+import com.unfuckdoc.domain.MiniLmEmbedder
 import com.unfuckdoc.domain.NoopEmbedder
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.domain.SemanticCanonicalizer
@@ -34,7 +35,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            opensearch,
+            opensearch, NoopEmbedder,
         )
         service.create("contacts", "email")
 
@@ -68,7 +69,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            unavailableOpenSearch(),
+            unavailableOpenSearch(), NoopEmbedder,
         )
         service.create("accounts", "email")
 
@@ -115,7 +116,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            unavailableOpenSearch(),
+            unavailableOpenSearch(), NoopEmbedder,
         )
         service.create("deals", "email")
         service.add(
@@ -142,7 +143,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            unavailableOpenSearch(),
+            unavailableOpenSearch(), NoopEmbedder,
         )
         service.create("aud", "email")
         service.add(
@@ -171,7 +172,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            unavailableOpenSearch(),
+            unavailableOpenSearch(), NoopEmbedder,
         )
         service.create("dup", "email")
         service.add(
@@ -201,7 +202,7 @@ class CollectionServiceTest {
     fun `keyword search is punctuation and order independent`() {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
-            Consolidator(), unavailableOpenSearch(),
+            Consolidator(), unavailableOpenSearch(), NoopEmbedder,
         )
         service.create("props", "email")
         service.add("props", "p.csv", listOf("email", "description"), listOf(
@@ -217,6 +218,27 @@ class CollectionServiceTest {
     }
 
     @Test
+    fun `semantic search ranks a free-text field by meaning, not keyword overlap`() {
+        val service = CollectionService(
+            Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), MiniLmEmbedder())),
+            Consolidator(), unavailableOpenSearch(), MiniLmEmbedder(),
+        )
+        service.create("props", "email")
+        service.add("props", "p.csv", listOf("email", "description"), listOf(
+            mapOf("email" to "a@x.com", "description" to "Spacious family home with a large garden, lawn, and outdoor patio"),
+            mapOf("email" to "b@x.com", "description" to "Modern apartment right next to the subway station and public transit"),
+        ))
+        // "backyard" shares no keyword with either row; semantically it's the garden/outdoor one
+        val res = service.search("props", "backyard", "", emptyList(), emptyList(), 10, 1, null, "semantic")!!
+        assertEquals(2, res.total)
+        assertTrue(res.results.first()["description"]!!.contains("garden"), "garden home should rank first for 'backyard'")
+
+        // keyword mode with the same term finds nothing (no literal match) — proving it's really semantic
+        val kw = service.search("props", "backyard", "", emptyList(), emptyList(), 10, 1, null, "keyword")!!
+        assertEquals(0, kw.total)
+    }
+
+    @Test
     fun `orphan sweep deletes stale indexes but spares live collections`() {
         val opensearch = mockk<OpenSearchService>(relaxed = true)
         every { opensearch.available() } returns false   // keep merge in-memory
@@ -228,7 +250,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            opensearch,
+            opensearch, NoopEmbedder,
         )
         service.create("keepme", "email")   // live -> index col_keepme
 

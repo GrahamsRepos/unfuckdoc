@@ -2,6 +2,7 @@ package com.unfuckdoc.api
 
 import com.unfuckdoc.domain.Consolidator
 import com.unfuckdoc.domain.Dsl
+import com.unfuckdoc.domain.Embedder
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.opensearch.OpenSearchService
 import jakarta.inject.Inject
@@ -21,6 +22,7 @@ class CollectionService @Inject constructor(
     private val pipeline: Pipeline,
     private val consolidator: Consolidator,
     private val opensearch: OpenSearchService,
+    private val embedder: Embedder,
 ) {
     private class Agg(var osType: String?, var kind: String, var cardinality: String) {
         val sources = mutableListOf<String>()
@@ -39,6 +41,7 @@ class CollectionService @Inject constructor(
         val segments = mutableListOf<Pair<String, List<FieldFilter>>>()   // named filtered views
         val customCanonicals = LinkedHashMap<String, String>()            // user-defined canonical -> osType
         val customArrays = LinkedHashSet<String>()                        // customs declared multi-value (list)
+        var vectors: List<FloatArray>? = null      // per-entity embeddings of the free-text field(s); lazy
         var rawRecords = 0
         var merged = 0
         var opensearch = OsStatus("unknown")
@@ -167,7 +170,32 @@ class CollectionService @Inject constructor(
             agg.valueConflicts = if (agg.cardinality == "array") 0 else c.entities.count { it[canon] is List<*> }
         }
         c.files.add(CollectionFileDto(filename, result.nRows, mapping))
+        c.vectors = null   // entities changed -> stale embeddings; recompute lazily on next semantic search
         return mapping
+    }
+
+    /** Embeddable text fields: genuinely free-text columns, plus anything mapped to the `description`
+     *  canonical (notes/bio/review/comments) — the "larger text" fields worth vectorising. */
+    private fun textFields(c: Collection): List<String> =
+        c.schema.entries.filter { it.value.kind == "free_text" || it.key == "description" }.map { it.key }
+
+    /** Lazily embed each entity's free-text field(s) into a per-entity vector. Returns null if unavailable. */
+    private fun ensureVectors(c: Collection): List<FloatArray>? {
+        if (!embedder.enabled) return null
+        val fields = textFields(c)
+        if (fields.isEmpty()) return null
+        c.vectors?.let { return it }
+        val vecs = c.entities.map { e ->
+            val text = fields.joinToString(" ") { Docs.flattenText(e[it]) }.trim()
+            if (text.isEmpty()) FloatArray(0) else embedder.embed(text)
+        }
+        c.vectors = vecs
+        return vecs
+    }
+
+    private fun dot(a: FloatArray, b: FloatArray): Double {
+        if (a.isEmpty() || b.isEmpty() || a.size != b.size) return -1.0
+        var s = 0.0; for (i in a.indices) s += a[i] * b[i]; return s   // both L2-normalized -> cosine
     }
 
     /** Create or replace a named segment (saved filtered view) on the collection. */
@@ -227,35 +255,47 @@ class CollectionService @Inject constructor(
         size: Int,
         page: Int,
         geo: GeoFilter? = null,
+        mode: String = "keyword",
     ): CollectionSearchResponse? {
         val c = collections[name] ?: return null
         val display = collDisplay(c)
         val dtypes = c.schema.mapValues { Docs.dtypeOf(it.value.osType) }
-        val ql = q.lowercase()
         val tagValue = tag.trim()
         val sourceValues = sourceFiles.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
         val poly = geo?.polygon?.mapNotNull { if (it.size >= 2) it[0] to it[1] else null }
         val safeSize = size.coerceAtLeast(1)
         val safePage = page.coerceAtLeast(1)
         val offset = ((safePage - 1).toLong() * safeSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-        val out = ArrayList<Map<String, String>>()
-        var total = 0
-        for (d in c.entities) {
-            if (tagValue.isNotEmpty() && !entityTags(c, d).contains(tagValue)) continue
-            if (sourceValues.isNotEmpty() && sourceFiles(d).none { it in sourceValues }) continue
-            if (filters.any { f -> !Docs.filterMatch(Docs.fieldValues(d[f.field]), f.value, dtypes[f.field]) }) continue
-            if (geo != null && !geoMatch(d[geo.field], geo, poly)) continue
-            if (ql.isNotEmpty() && !Docs.textMatch(d, q)) continue
-            if (total >= offset && out.size < safeSize) {
-                out.add(display.associateWith { col ->
-                    when (col) {
-                        "_source_file" -> sourceFiles(d).joinToString(", ")
-                        "name" -> Docs.rowName(d)
-                        else -> Docs.flattenText(d[col])
-                    }
-                })
+
+        // structured filters apply in both modes; keyword `q` matches by substring, semantic `q` ranks by vector
+        val vectors = if (mode == "semantic" && q.isNotBlank()) ensureVectors(c) else null
+        val qvec = vectors?.let { embedder.embed(q) }
+
+        var matched = c.entities.indices.filter { i ->
+            val d = c.entities[i]
+            (tagValue.isEmpty() || entityTags(c, d).contains(tagValue)) &&
+                (sourceValues.isEmpty() || sourceFiles(d).any { it in sourceValues }) &&
+                filters.all { f -> Docs.filterMatch(Docs.fieldValues(d[f.field]), f.value, dtypes[f.field]) } &&
+                (geo == null || geoMatch(d[geo.field], geo, poly))
+        }
+        matched = if (qvec != null && vectors != null) {
+            // semantic: rank matched entities that have a text vector by cosine to the query
+            matched.mapNotNull { i -> vectors[i].takeIf { it.isNotEmpty() }?.let { i to dot(qvec, it) } }
+                .sortedByDescending { it.second }.map { it.first }
+        } else if (q.isNotBlank()) {
+            matched.filter { Docs.textMatch(c.entities[it], q) }   // keyword substring
+        } else matched
+
+        val total = matched.size
+        val out = matched.drop(offset).take(safeSize).map { i ->
+            val d = c.entities[i]
+            display.associateWith { col ->
+                when (col) {
+                    "_source_file" -> sourceFiles(d).joinToString(", ")
+                    "name" -> Docs.rowName(d)
+                    else -> Docs.flattenText(d[col])
+                }
             }
-            total++
         }
         val query = Dsl.query(
             q.ifBlank { null },
@@ -336,7 +376,7 @@ class CollectionService @Inject constructor(
         val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, n in c.customArrays, c.schema.containsKey(n)) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,
             schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch,
-            collectionTags(c), custom)
+            collectionTags(c), custom, embedder.enabled && textFields(c).isNotEmpty())
     }
 
     private val wordRe = Regex("[A-Za-z][A-Za-z0-9'-]{2,}")

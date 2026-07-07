@@ -20,7 +20,7 @@ class GeoTest {
         every { os.available() } returns false
         return CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
-            Consolidator(), os,
+            Consolidator(), os, NoopEmbedder,
         )
     }
 

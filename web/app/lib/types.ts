@@ -139,7 +139,7 @@ export interface CollectionDetail {
   name: string; index: string; n_records: number;
   key_field: string; raw_records: number; merged: number;
   schema: SchemaField[]; files: CollectionFile[]; segments: Segment[]; opensearch: OsStatus;
-  tags: CollectionTag[]; custom_canonicals: CustomCanonical[];
+  tags: CollectionTag[]; custom_canonicals: CustomCanonical[]; semantic_search: boolean;
 }
 export interface CollectionSearchResponse {
   display: string[]; count: number; total: number; page: number; page_size: number;

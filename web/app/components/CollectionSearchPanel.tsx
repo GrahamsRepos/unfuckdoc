@@ -12,6 +12,7 @@ export function CollectionSearchPanel({ detail, search }:
     return { field: s.slice(0, i), value: s.slice(i + 1) };
   });
   const q = params.get("q") ?? "";
+  const mode = params.get("mode") ?? "keyword";
   const tag = params.get("tag") ?? "";
   const sourceFiles = params.getAll("source_file");
   const page = Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1);
@@ -32,6 +33,8 @@ export function CollectionSearchPanel({ detail, search }:
     const qv = String(fd.get("q") ?? "").trim();
     np.set("q", qv);
     np.set("page", "1");
+    const md = String(fd.get("mode") ?? "keyword");
+    if (md === "semantic") np.set("mode", "semantic");
     const existingSize = params.get("size");
     if (existingSize) np.set("size", existingSize);
     const tg = String(fd.get("tag") ?? "").trim();
@@ -83,7 +86,14 @@ export function CollectionSearchPanel({ detail, search }:
         >
           {detail.files.map((f) => <option key={f.name} value={f.name}>{f.name}</option>)}
         </select>
-        <input name="q" type="text" defaultValue={q} placeholder="keyword across all fields…" />
+        <input name="q" type="text" defaultValue={q}
+          placeholder={mode === "semantic" ? "describe what you're looking for…" : "keyword across all fields…"} />
+        {detail.semantic_search && (
+          <select name="mode" defaultValue={mode} title="keyword = exact terms; semantic = meaning (vector) over text fields">
+            <option value="keyword">keyword</option>
+            <option value="semantic">semantic</option>
+          </select>
+        )}
         <button className="btn" type="submit">Search</button>
       </form>
       <TagPicker facets={facets} filters={filters} onAdd={addFilter} onRemove={removeFilter} />

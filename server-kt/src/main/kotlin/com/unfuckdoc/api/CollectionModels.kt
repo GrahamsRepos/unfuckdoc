@@ -57,6 +57,7 @@ data class CollectionDetail(
     val segments: List<Segment>, val opensearch: OsStatus,
     val tags: List<CollectionTag> = emptyList(),
     val customCanonicals: List<CustomCanonical> = emptyList(),
+    val semanticSearch: Boolean = false,   // vector search available (embeddings on + a free-text field)
 )
 
 @Serializable
