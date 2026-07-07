@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from "react-router";
+import { Form, Link, NavLink, Outlet, redirect } from "react-router";
 import type { Route } from "./+types/collection";
 import { api } from "~/lib/api";
 
@@ -11,6 +11,20 @@ export function meta({ params }: Route.MetaArgs) {
 export async function loader({ params }: Route.LoaderArgs) {
   const [detail, samples] = await Promise.all([api.collection(params.name), api.samples()]);
   return { detail, samples: samples.samples };
+}
+
+/** Collection-level management: recalc (rebuild merge on the current key) and delete. */
+export async function action({ request, params }: Route.ActionArgs) {
+  const form = await request.formData();
+  const intent = String(form.get("intent") ?? "");
+  if (intent === "delete") {
+    await api.deleteCollection(params.name);
+    return redirect("/collections");
+  }
+  if (intent === "recalc") {
+    await api.setCollectionKey(params.name, String(form.get("key") ?? "email"));
+  }
+  return redirect(`/collections/${encodeURIComponent(params.name)}`);
 }
 
 const STAGES = [
@@ -27,9 +41,21 @@ export default function Collection({ loaderData, params }: Route.ComponentProps)
   return (
     <>
       <section className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
           <h2>Collection: {detail.name} <span className="badge" title="merge key">⌘ merge on {detail.key_field}</span></h2>
-          <Link to="/collections" className="mut">← all collections</Link>
+          <div className="fieldbar" style={{ gap: 8 }}>
+            <Form method="post" style={{ display: "inline" }}>
+              <input type="hidden" name="intent" value="recalc" />
+              <input type="hidden" name="key" value={detail.key_field} />
+              <button className="btn ghost" type="submit" title="re-run classify → merge over all sources">↻ recalc</button>
+            </Form>
+            <Form method="post" style={{ display: "inline" }}
+              onSubmit={(e) => { if (!confirm(`Delete collection "${detail.name}"? This removes its index too.`)) e.preventDefault(); }}>
+              <input type="hidden" name="intent" value="delete" />
+              <button className="btn ghost" type="submit" title="delete this collection">🗑 delete</button>
+            </Form>
+            <Link to="/collections" className="mut">← all</Link>
+          </div>
         </div>
 
         {/* the workflow as a flow: sources -> merged entities -> fields -> index */}

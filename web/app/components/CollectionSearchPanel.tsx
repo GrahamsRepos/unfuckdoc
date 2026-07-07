@@ -60,10 +60,15 @@ export function CollectionSearchPanel({ detail, search }:
     np.set("page", String(nextPage));
     apply(np);
   }
+  function clearAll() { apply(new URLSearchParams()); }
+  const hasQuery = Boolean(q || tag || filters.length || sourceFiles.length || params.get("page"));
 
   return (
     <section className="card">
-      <h2>Search the collection</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h2>Search the collection</h2>
+        {hasQuery && <button type="button" className="btn ghost" onClick={clearAll}>✕ clear all</button>}
+      </div>
       <form className="searchbar" onSubmit={runSearch}>
         <select name="tag" defaultValue={tag}>
           <option value="">— any tag —</option>
