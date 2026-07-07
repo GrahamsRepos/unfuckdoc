@@ -115,3 +115,16 @@ th { color: var(--mut); font-weight: 600; font-size: 11.5px; text-transform: upp
 .dsl { margin: 0; padding: 12px 14px; border-top: 1px solid var(--line); overflow-x: auto;
   font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.5; color: #c9d5e3; white-space: pre; }
 .hidden { display: none; }
+
+/* collection workflow stepper */
+.stepper { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.step { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px;
+  color: var(--mut); text-decoration: none; border: 1px solid transparent; }
+.step:hover { background: var(--panel2); }
+.step.active { background: var(--panel2); color: var(--ink); border-color: var(--line); }
+.step-n { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--pill); color: var(--mut); font-size: 12px; font-weight: 700; }
+.step.active .step-n { background: var(--acc); color: #06121f; }
+.step-label { font-weight: 600; font-size: 13px; }
+.step-label small { font-weight: 400; }
+.step-arrow { color: var(--line); margin-left: 4px; }

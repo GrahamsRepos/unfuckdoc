@@ -4,6 +4,7 @@ import type { CollectionDetail } from "~/lib/types";
 /** Named saved filter views over the merged collection ("cold leads", "customers · Cape Town"). */
 export function Segments({ detail, activeFilters }: { detail: CollectionDetail; activeFilters: { field: string; value: string }[] }) {
   const loc = useLocation();
+  const base = `/collections/${encodeURIComponent(detail.name)}/explore`;
   const toQuery = (filters: { field: string; value: string }[]) =>
     "?" + filters.map((f) => `f=${encodeURIComponent(`${f.field}:${f.value}`)}`).join("&");
   const activeKey = JSON.stringify(activeFilters);
@@ -12,7 +13,7 @@ export function Segments({ detail, activeFilters }: { detail: CollectionDetail; 
     <section className="card">
       <h3>Segments <span className="mut">— saved filtered views</span></h3>
       <div className="chips" style={{ marginTop: 10 }}>
-        <Link to={`/collections/${encodeURIComponent(detail.name)}`}
+        <Link to={base}
           className="chip" style={{ opacity: activeFilters.length === 0 ? 1 : 0.6 }}>
           all · {detail.n_records}
         </Link>
@@ -20,7 +21,7 @@ export function Segments({ detail, activeFilters }: { detail: CollectionDetail; 
           const active = JSON.stringify(s.filters.map((f) => ({ field: f.field, value: f.value }))) === activeKey;
           return (
             <span key={s.name} className="chip" style={{ display: "inline-flex", gap: 6, alignItems: "center", opacity: active ? 1 : 0.75 }}>
-              <Link to={`/collections/${encodeURIComponent(detail.name)}${toQuery(s.filters)}`} className="to">
+              <Link to={`${base}${toQuery(s.filters)}`} className="to">
                 {s.name} · {s.count}
               </Link>
               <Form method="post" style={{ display: "inline" }}
