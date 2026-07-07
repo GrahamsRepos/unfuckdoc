@@ -42,12 +42,21 @@ export default function Collections({ loaderData }: Route.ComponentProps) {
         <input name="name" type="text" placeholder="new collection name (e.g. customers)" />
         <label className="mut" style={{ display: "flex", alignItems: "center", gap: 6 }}>
           merge on
-          <select name="key" defaultValue="email" title="the unique key used to merge the same entity across files">
-            {["email", "phone", "identifier", "full_name"].map((k) => <option key={k} value={k}>{k}</option>)}
-          </select>
+          {/* the collection is empty at creation, so there are no inferred fields yet — offer common
+              identity keys but let you type any canonical name; you can also change it after adding files */}
+          <input name="key" list="merge-keys" defaultValue="email" style={{ width: "13ch" }}
+            title="the unique key used to merge the same entity across files — a high-cardinality identifier" />
+          <datalist id="merge-keys">
+            {["email", "phone", "identifier", "full_name", "company", "account", "user_id"].map((k) => <option key={k} value={k} />)}
+          </datalist>
         </label>
         <button className="btn" type="submit">+ create</button>
       </Form>
+      <p className="hint" style={{ marginTop: -6 }}>
+        Only a few keys show here because the collection has no data yet. Pick a likely unique identifier
+        (or type your own) — you can change it later on the collection&apos;s <b>Sources</b> stage, where the
+        full inferred field list appears once you&apos;ve added a file.
+      </p>
 
       <div className="merge" style={{ marginTop: 16 }}>
         {collections.length === 0 && <div className="mut">No collections yet — create one above.</div>}
