@@ -68,6 +68,8 @@ export const api = {
   addExtraction: (name: string, attr: string, type: string, values: string[]) =>
     postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(
       `/api/collections/${encodeURIComponent(name)}/extract`, { name: attr, type, values }),
+  extractProgress: (name: string) =>
+    get<{ running: boolean; done: number; total: number }>(`/api/collections/${encodeURIComponent(name)}/extract/progress`),
   removeExtraction: async (name: string, attr: string) => {
     await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/extract/${encodeURIComponent(attr)}`, { method: "DELETE" });
   },

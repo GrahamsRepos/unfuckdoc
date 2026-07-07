@@ -64,6 +64,13 @@ class CollectionService @Inject constructor(
         var rawRecords = 0
         var merged = 0
         var opensearch = OsStatus("unknown")
+        @Volatile var extractRunning = false      // an LLM extraction is in progress (background)
+        @Volatile var extractDone = 0
+        @Volatile var extractTotal = 0
+    }
+
+    private val extractPool = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "attr-extract").apply { isDaemon = true }
     }
 
     private val collections = LinkedHashMap<String, Collection>()
@@ -252,12 +259,22 @@ class CollectionService @Inject constructor(
         if (textFields(c).isEmpty()) return CollectionAddResponse(error = "collection has no free-text field to extract from")
         val an = attr.trim().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
         if (an.isEmpty()) return CollectionAddResponse(error = "invalid attribute name")
+        if (c.extractRunning) return CollectionAddResponse(error = "an extraction is already running")
         c.extractSpecs.removeAll { it.name == an }
         c.extractSpecs.add(ExtractSpec(an, type.takeIf { it in extractTypes } ?: "keyword", values.map { it.trim() }.filter { it.isNotEmpty() }))
         c.extractCache.clear()   // spec set changed -> re-extract
-        rebuild(c); c.opensearch = reindex(c)
+        // run the (slow) per-entity LLM calls in the background; the UI polls progress()
+        c.extractTotal = c.entities.size
+        c.extractDone = 0; c.extractRunning = true
+        extractPool.submit {
+            try { applyExtraction(c); c.opensearch = reindex(c) } finally { c.extractRunning = false }
+        }
         return CollectionAddResponse(added = an, detail = detail(c))
     }
+
+    /** Live progress of a running background extraction. */
+    fun extractionProgress(name: String): Triple<Boolean, Int, Int>? =
+        collections[name]?.let { Triple(it.extractRunning, it.extractDone, it.extractTotal) }
 
     fun removeExtraction(name: String, attr: String): CollectionDetail? {
         val c = collections[name] ?: return null
@@ -280,17 +297,19 @@ class CollectionService @Inject constructor(
                 "- ${s.name}: $t"
             } + "\nUse the negation and wording carefully (e.g. 'no garden' -> has_garden false). " +
             "If a value is not stated, use null."
-        for (e in c.entities) {
+        for ((idx, e) in c.entities.withIndex()) {
             val text = fields.joinToString(" ") { Docs.flattenText(e[it]) }.trim()
-            if (text.isEmpty()) continue
-            val cacheKey = "$specKey||$text"
-            val extracted = c.extractCache.getOrPut(cacheKey) {
-                runCatching {
-                    val obj = KJson.parseToJsonElement(llm.completeJson(system, text)).jsonObject
-                    c.extractSpecs.associate { s -> s.name to coerce(obj[s.name]?.jsonPrimitive, s.osType) }
-                }.getOrDefault(emptyMap())
+            if (text.isNotEmpty()) {
+                val cacheKey = "$specKey||$text"
+                val extracted = c.extractCache.getOrPut(cacheKey) {
+                    runCatching {
+                        val obj = KJson.parseToJsonElement(llm.completeJson(system, text)).jsonObject
+                        c.extractSpecs.associate { s -> s.name to coerce(obj[s.name]?.jsonPrimitive, s.osType) }
+                    }.getOrDefault(emptyMap())
+                }
+                for ((k, v) in extracted) if (v != null) e[k] = v
             }
-            for ((k, v) in extracted) if (v != null) e[k] = v
+            c.extractDone = idx + 1
         }
         // register the extracted attributes as typed schema fields
         for (s in c.extractSpecs) {

@@ -2,6 +2,7 @@ package com.unfuckdoc.routes
 
 import com.unfuckdoc.api.CollectionService
 import com.unfuckdoc.api.DatasetService
+import com.unfuckdoc.api.ExtractProgress
 import com.unfuckdoc.api.FieldFilter
 import com.unfuckdoc.api.GeoFilter
 import com.unfuckdoc.api.GeoPointsResponse
@@ -168,6 +169,12 @@ class ApiController @Inject constructor(
             val req = call.receive<ExtractRequest>()
             call.respond(collections.addExtraction(call.parameters["name"]!!, req.name, req.type, req.values))
         }
+        get("/api/collections/{name}/extract/progress") {
+            val p = collections.extractionProgress(call.parameters["name"]!!)
+                ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection"))
+            call.respond(ExtractProgress(p.first, p.second, p.third))
+        }
+
         delete("/api/collections/{name}/extract/{attr}") {
             call.respond(collections.removeExtraction(call.parameters["name"]!!, call.parameters["attr"]!!)
                 ?: return@delete call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))

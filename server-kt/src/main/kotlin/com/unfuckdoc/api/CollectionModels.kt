@@ -66,6 +66,9 @@ data class ExtractedAttribute(val name: String, val osType: String, val values: 
 data class FieldTransform(val field: String, val expr: String)
 
 @Serializable
+data class ExtractProgress(val running: Boolean, val done: Int, val total: Int)
+
+@Serializable
 data class CollectionDetail(
     val name: String, val index: String, val nRecords: Int,
     val keyField: String, val rawRecords: Int, val merged: Int,

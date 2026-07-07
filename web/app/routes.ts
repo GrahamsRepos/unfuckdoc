@@ -10,4 +10,5 @@ export default [
     route("explore", "routes/collection.explore.tsx"),
   ]),
   route("match", "routes/match.tsx"),
+  route("xprogress/:name", "routes/xprogress.tsx"),   // resource route: poll extraction progress
 ] satisfies RouteConfig;
