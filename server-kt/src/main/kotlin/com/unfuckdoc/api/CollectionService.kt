@@ -352,23 +352,24 @@ class CollectionService @Inject constructor(
         val vectors = if (mode == "semantic" && q.isNotBlank()) ensureVectors(c) else null
         val qvec = vectors?.let { embedder.embed(q) }
 
-        var matched = c.entities.indices.filter { i ->
+        val filteredIdx = c.entities.indices.filter { i ->
             val d = c.entities[i]
             (tagValue.isEmpty() || entityTags(c, d).contains(tagValue)) &&
                 (sourceValues.isEmpty() || sourceFiles(d).any { it in sourceValues }) &&
                 filters.all { f -> Docs.filterMatch(Docs.fieldValues(d[f.field]), f.value, dtypes[f.field]) } &&
                 (geo == null || geoMatch(d[geo.field], geo, poly))
         }
-        matched = if (qvec != null && vectors != null) {
-            // semantic: rank matched entities that have a text vector by cosine to the query
-            matched.mapNotNull { i -> vectors[i].takeIf { it.isNotEmpty() }?.let { i to dot(qvec, it) } }
-                .sortedByDescending { it.second }.map { it.first }
+        // keep the cosine score alongside each index in semantic mode (null otherwise)
+        val ranked: List<Pair<Int, Double?>> = if (qvec != null && vectors != null) {
+            filteredIdx.mapNotNull { i -> vectors[i].takeIf { it.isNotEmpty() }?.let { i to dot(qvec, it) } }
+                .sortedByDescending { it.second }.map { it.first to it.second }
         } else if (q.isNotBlank()) {
-            matched.filter { Docs.textMatch(c.entities[it], q) }   // keyword substring
-        } else matched
+            filteredIdx.filter { Docs.textMatch(c.entities[it], q) }.map { it to null }
+        } else filteredIdx.map { it to null }
 
-        val total = matched.size
-        val out = matched.drop(offset).take(safeSize).map { i ->
+        val total = ranked.size
+        val page = ranked.drop(offset).take(safeSize)
+        val out = page.map { (i, _) ->
             val d = c.entities[i]
             display.associateWith { col ->
                 when (col) {
@@ -378,6 +379,8 @@ class CollectionService @Inject constructor(
                 }
             }
         }
+        // per-result cosine scores (rounded), only in semantic mode
+        val scores = if (qvec != null) page.map { (_, s) -> Math.round((s ?: 0.0) * 1000) / 1000.0 } else emptyList()
         val query = Dsl.query(
             q.ifBlank { null },
             filters.associate { it.field to it.value },
@@ -387,7 +390,7 @@ class CollectionService @Inject constructor(
             sourceValues.firstOrNull(),
             "_source_file",
         )
-        return CollectionSearchResponse(display, out.size, total, safePage, safeSize, out, Dsl.display(query, safeSize), c.index)
+        return CollectionSearchResponse(display, out.size, total, safePage, safeSize, out, Dsl.display(query, safeSize), c.index, scores = scores)
     }
 
     // ---- internals ----

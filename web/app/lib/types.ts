@@ -147,6 +147,7 @@ export interface CollectionSearchResponse {
   display: string[]; count: number; total: number; page: number; page_size: number;
   results: Record<string, string>[];
   dsl: unknown; index: string; error?: string;
+  scores?: number[];
 }
 
 export interface MatchKey {

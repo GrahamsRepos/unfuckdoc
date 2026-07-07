@@ -156,3 +156,10 @@ th { color: var(--mut); font-weight: 600; font-size: 11.5px; text-transform: upp
 .join-edge .arrow { color: var(--acc); letter-spacing: -1px; }
 .join-row .x { cursor: pointer; color: var(--mut); border: 0; background: none; font-size: 16px; padding: 0 4px; }
 .join-row .x:hover { color: var(--bad); }
+
+/* cosine-similarity relevance bar (semantic search results) */
+.simbar { position: relative; display: inline-flex; align-items: center; width: 110px; height: 16px;
+  background: var(--pill); border-radius: 4px; overflow: hidden; }
+.simbar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--acc); border-radius: 4px 0 0 4px; }
+.simbar-val { position: relative; margin-left: auto; padding-right: 5px; font-size: 10.5px;
+  font-family: ui-monospace, Menlo, monospace; color: var(--ink); z-index: 1; }

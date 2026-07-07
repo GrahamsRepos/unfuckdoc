@@ -78,4 +78,5 @@ data class CollectionSearchResponse(
     val display: List<String>, val count: Int, val total: Int, val page: Int, val pageSize: Int,
     val results: List<Map<String, String>>,
     val dsl: JsonElement, val index: String, val error: String? = null,
+    val scores: List<Double> = emptyList(),   // per-result cosine similarity (semantic mode only)
 )

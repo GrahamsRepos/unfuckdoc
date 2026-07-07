@@ -103,13 +103,26 @@ export function CollectionSearchPanel({ detail, search }:
           <Dsl dsl={search.dsl} index={search.index} />
           {search.error ? <div className="empty">⚠ {search.error}</div> : search.count ? (
             <>
-              <p className="hint">{search.count} record(s) on this page <span className="mut">({search.total} total)</span></p>
+              <p className="hint">{search.count} record(s) on this page <span className="mut">({search.total} total)</span>
+                {search.scores?.length ? <span className="mut"> · bars = cosine similarity to your query</span> : null}
+              </p>
               <div className="scroll">
                 <table>
-                  <thead><tr>{search.display.map((c) => <th key={c}>{c === "_source_file" ? "source" : c}</th>)}</tr></thead>
+                  <thead><tr>
+                    {search.scores?.length ? <th>relevance</th> : null}
+                    {search.display.map((c) => <th key={c}>{c === "_source_file" ? "source" : c}</th>)}
+                  </tr></thead>
                   <tbody>
                     {search.results.map((r, i) => (
                       <tr key={i}>
+                        {search.scores?.length ? (
+                          <td style={{ minWidth: 130 }}>
+                            <span className="simbar" title={`cosine ${search.scores[i]?.toFixed(3)}`}>
+                              <span className="simbar-fill" style={{ width: `${Math.max(0, Math.min(1, search.scores[i] ?? 0)) * 100}%` }} />
+                              <span className="simbar-val">{(search.scores[i] ?? 0).toFixed(2)}</span>
+                            </span>
+                          </td>
+                        ) : null}
                         {search.display.map((c) => <td key={c}>{r[c] ? r[c] : <span className="mut">—</span>}</td>)}
                       </tr>
                     ))}
