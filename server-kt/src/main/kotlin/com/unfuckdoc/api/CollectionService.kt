@@ -577,7 +577,8 @@ class CollectionService @Inject constructor(
 
     /** Distinct [value, count] pairs for a low-cardinality keyword field, so the UI can offer a picker. */
     private fun facetValues(c: Collection, field: String, osType: String?) =
-        if (osType != "keyword") null else {
+        // keyword + boolean fields get a value picker (booleans -> true/false chips instead of a text box)
+        if (osType != "keyword" && osType != "boolean") null else {
             val counts = LinkedHashMap<String, Int>()
             c.entities.forEach { d -> Docs.fieldValues(d[field]).forEach { v -> counts.merge(v.toString(), 1, Int::plus) } }
             if (counts.isEmpty() || counts.size > 40) null
