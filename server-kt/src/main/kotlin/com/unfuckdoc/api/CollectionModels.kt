@@ -53,7 +53,7 @@ data class CustomCanonical(val name: String, val osType: String, val array: Bool
  *  attach that row's other canonical fields (e.g. join people to a location table on `city` to
  *  attach `location` coords). Entities keep their identity; they gain the attached fields. */
 @Serializable
-data class EnrichmentJoin(val source: String, val joinField: String, val attached: List<String>, val matched: Int)
+data class EnrichmentJoin(val source: String, val joinField: String, val attached: List<String>, val matched: Int, val fromCollection: Boolean = false)
 
 @Serializable
 data class CollectionDetail(

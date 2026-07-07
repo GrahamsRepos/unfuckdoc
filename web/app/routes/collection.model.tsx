@@ -20,7 +20,11 @@ export async function action({ request, params }: Route.ActionArgs) {
   } else if (intent === "delete-canonical") {
     await api.deleteCanonical(params.name, String(form.get("canon")));
   } else if (intent === "add-enrichment") {
-    await api.addEnrichment(params.name, String(form.get("source") ?? ""), String(form.get("join_field") ?? ""));
+    const ref = String(form.get("ref") ?? "");
+    const joinField = String(form.get("join_field") ?? "");
+    // "collection:<name>" chains another collection; otherwise it's a sample file path
+    if (ref.startsWith("collection:")) await api.addEnrichment(params.name, { collection: ref.slice("collection:".length) }, joinField);
+    else if (ref) await api.addEnrichment(params.name, { source: ref }, joinField);
   } else if (intent === "remove-enrichment") {
     await api.removeEnrichment(params.name, String(form.get("source")));
   }
@@ -28,8 +32,8 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Model({ params }: Route.ComponentProps) {
-  const parent = useRouteLoaderData("routes/collection") as { detail: CollectionDetail; samples: string[] };
-  const { detail, samples } = parent;
+  const parent = useRouteLoaderData("routes/collection") as { detail: CollectionDetail; samples: string[]; otherCollections: string[] };
+  const { detail, samples, otherCollections } = parent;
   const base = `/collections/${encodeURIComponent(params.name)}`;
   const conflicts = detail.schema.reduce((n, s) => n + (s.conflicts ?? 0), 0);
 
@@ -55,7 +59,7 @@ export default function Model({ params }: Route.ComponentProps) {
 
       <MergeGraph detail={detail} />
       <CustomCanonicals detail={detail} />
-      <EnrichmentJoins detail={detail} samples={samples} />
+      <EnrichmentJoins detail={detail} samples={samples} collections={otherCollections} />
       <FileMapping detail={detail} />
       <CollectionSchema detail={detail} />
     </>

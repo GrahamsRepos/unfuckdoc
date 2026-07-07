@@ -55,9 +55,10 @@ export const api = {
   deleteCanonical: async (name: string, canon: string) => {
     await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/canonicals/${encodeURIComponent(canon)}`, { method: "DELETE" });
   },
-  addEnrichment: (name: string, source: string, joinField: string) =>
+  addEnrichment: (name: string, ref: { source?: string; collection?: string }, joinField: string) =>
     postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(
-      `/api/collections/${encodeURIComponent(name)}/enrich`, { source, join_field: joinField }),
+      `/api/collections/${encodeURIComponent(name)}/enrich`,
+      { source: ref.source ?? "", collection: ref.collection ?? "", join_field: joinField }),
   removeEnrichment: async (name: string, source: string) => {
     await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/enrich/${encodeURIComponent(source)}`, { method: "DELETE" });
   },

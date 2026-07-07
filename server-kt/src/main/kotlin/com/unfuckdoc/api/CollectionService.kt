@@ -31,8 +31,10 @@ class CollectionService @Inject constructor(
         val types = mutableSetOf<String?>()
     }
     private class RawFile(val name: String, val headers: List<String>, val rows: List<Map<String, String?>>)
-    private class Enrich(val source: String, val joinField: String, val headers: List<String>,
-                         val rows: List<Map<String, String?>>) { var attached: List<String> = emptyList(); var matched = 0 }
+    /** A lookup join. Reference is either a raw file (headers+rows) or another collection (refCollection). */
+    private class Enrich(val source: String, val joinField: String,
+                         val headers: List<String>?, val rows: List<Map<String, String?>>?,
+                         val refCollection: String?) { var attached: List<String> = emptyList(); var matched = 0 }
     private class Collection(val name: String, val index: String, var keyField: String) {
         val rawFiles = mutableListOf<RawFile>()                     // retained so a re-map can rebuild
         val overrides = LinkedHashMap<String, String>()             // raw column name -> forced canonical
@@ -131,9 +133,24 @@ class CollectionService @Inject constructor(
         if (joinField !in refUnified) return CollectionAddResponse(error = "$source has no '$joinField' field to join on")
         if (joinField !in c.schema.keys) return CollectionAddResponse(error = "collection has no '$joinField' field")
         c.enrichments.removeAll { it.source == source }
-        c.enrichments.add(Enrich(source, joinField, headers, rows))
+        c.enrichments.add(Enrich(source, joinField, headers, rows, null))
         rebuild(c); c.opensearch = reindex(c)
         return CollectionAddResponse(added = short(source), detail = detail(c))
+    }
+
+    /** Enrich from ANOTHER collection: attach its fields onto entities sharing `joinField`
+     *  (e.g. customers ⋈ a city→geo collection on `city` to attach `location`). Kept live — a
+     *  rebuild re-reads the reference collection's current entities. */
+    fun addEnrichmentCollection(name: String, refName: String, joinField: String): CollectionAddResponse {
+        val c = collections[name] ?: return CollectionAddResponse(error = "unknown collection")
+        val rc = collections[refName] ?: return CollectionAddResponse(error = "unknown reference collection")
+        if (refName == name) return CollectionAddResponse(error = "a collection can't enrich from itself")
+        if (joinField !in rc.schema.keys) return CollectionAddResponse(error = "collection '$refName' has no '$joinField' field")
+        if (joinField !in c.schema.keys) return CollectionAddResponse(error = "collection has no '$joinField' field")
+        c.enrichments.removeAll { it.source == refName }
+        c.enrichments.add(Enrich(refName, joinField, null, null, refName))
+        rebuild(c); c.opensearch = reindex(c)
+        return CollectionAddResponse(added = refName, detail = detail(c))
     }
 
     fun removeEnrichment(name: String, source: String): CollectionDetail? {
@@ -146,16 +163,27 @@ class CollectionService @Inject constructor(
     /** Attach reference fields onto each entity whose join value matches (non-overwrite). */
     private fun applyEnrichments(c: Collection) {
         for (en in c.enrichments) {
-            val cons = consolidator.consolidate(en.rows, pipeline.process(en.source, en.headers, en.rows).columns)
+            // reference docs + field types come from either another collection or a raw file
+            val refDocs: List<Map<String, Any?>>
+            val refFields: List<Triple<String, String?, Pair<String, String>>>   // canonical -> (osType, (kind, cardinality))
+            if (en.refCollection != null) {
+                val rc = collections[en.refCollection] ?: continue
+                refDocs = rc.entities
+                refFields = rc.schema.map { Triple(it.key, it.value.osType, it.value.kind to it.value.cardinality) }
+            } else {
+                val cons = consolidator.consolidate(en.rows!!, pipeline.process(en.source, en.headers!!, en.rows).columns)
+                refDocs = cons.docs
+                refFields = cons.unified.map { Triple(it.canonical, it.osType, it.kind to it.cardinality) }
+            }
             val lookup = HashMap<String, Map<String, Any?>>()
-            for (doc in cons.docs) {
+            for (doc in refDocs) {
                 val jv = Docs.normKey(doc[en.joinField], en.joinField)
                 if (jv.isNotEmpty()) lookup.putIfAbsent(jv, doc.filterKeys { it != en.joinField && !it.startsWith("_") })
             }
-            en.attached = cons.unified.map { it.canonical }.filter { it != en.joinField }
+            en.attached = refFields.map { it.first }.filter { it != en.joinField && !it.startsWith("_") }
             // register attached fields in the schema (typed from the reference) so they're searchable/geo
-            for (u in cons.unified.filter { it.canonical != en.joinField }) {
-                val agg = c.schema.getOrPut(u.canonical) { Agg(u.osType, u.kind, u.cardinality) }
+            for ((canon, osType, kc) in refFields) if (canon != en.joinField && !canon.startsWith("_")) {
+                val agg = c.schema.getOrPut(canon) { Agg(osType, kc.first, kc.second) }
                 if (en.source !in agg.sources) agg.sources.add(en.source)
             }
             var matched = 0
@@ -427,7 +455,7 @@ class CollectionService @Inject constructor(
             }
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
         val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, n in c.customArrays, c.schema.containsKey(n)) }
-        val enrichments = c.enrichments.map { EnrichmentJoin(short(it.source), it.joinField, it.attached, it.matched) }
+        val enrichments = c.enrichments.map { EnrichmentJoin(short(it.source), it.joinField, it.attached, it.matched, it.refCollection != null) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,
             schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch,
             collectionTags(c), custom, embedder.enabled && textFields(c).isNotEmpty(), enrichments)

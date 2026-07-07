@@ -46,7 +46,7 @@ import java.io.File
 @Serializable data class SegmentRequest(val name: String, val filters: List<FieldFilter> = emptyList())
 @Serializable data class MappingOverrideRequest(val column: String, val canonical: String = "")
 @Serializable data class CustomCanonicalRequest(val name: String, val type: String = "keyword", val array: Boolean = false)
-@Serializable data class EnrichRequest(val source: String, val joinField: String)
+@Serializable data class EnrichRequest(val source: String = "", val collection: String = "", val joinField: String)
 @Serializable data class CollectionKeyRequest(val key: String)
 @Serializable data class MatchCandidatesRequest(val a: String, val b: String)
 @Serializable data class MatchRequest(val a: String, val b: String, val key: String? = null, val threshold: Double = 0.85)
@@ -159,9 +159,13 @@ class ApiController @Inject constructor(
 
         post("/api/collections/{name}/enrich") {
             val req = call.receive<EnrichRequest>()
-            val text = sampleText(req.source) ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "unknown source"))
-            val (headers, rows) = csv.parse(text)
-            call.respond(collections.addEnrichment(call.parameters["name"]!!, req.source.substringAfterLast('/'), req.joinField, headers, rows))
+            if (req.collection.isNotBlank()) {
+                call.respond(collections.addEnrichmentCollection(call.parameters["name"]!!, req.collection, req.joinField))
+            } else {
+                val text = sampleText(req.source) ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "unknown source"))
+                val (headers, rows) = csv.parse(text)
+                call.respond(collections.addEnrichment(call.parameters["name"]!!, req.source.substringAfterLast('/'), req.joinField, headers, rows))
+            }
         }
         delete("/api/collections/{name}/enrich/{source}") {
             call.respond(collections.removeEnrichment(call.parameters["name"]!!, call.parameters["source"]!!)

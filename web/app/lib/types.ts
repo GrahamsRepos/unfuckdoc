@@ -135,7 +135,7 @@ export interface CollectionTag { tag: string; count: number; }
 export interface CustomCanonical { name: string; os_type: string; array: boolean; in_use: boolean; }
 export interface GeoPoint { lat: number; lng: number; label: string; }
 export interface GeoFilter { field: string; bbox?: number[]; polygon?: number[][]; }
-export interface EnrichmentJoin { source: string; join_field: string; attached: string[]; matched: number; }
+export interface EnrichmentJoin { source: string; join_field: string; attached: string[]; matched: number; from_collection: boolean; }
 export interface CollectionDetail {
   name: string; index: string; n_records: number;
   key_field: string; raw_records: number; merged: number;

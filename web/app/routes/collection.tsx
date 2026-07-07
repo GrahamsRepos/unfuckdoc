@@ -9,8 +9,10 @@ export function meta({ params }: Route.MetaArgs) {
 /** Layout for a single collection: shared header + the 3-stage stepper, with each stage rendered
  *  by a child route (Sources / Model / Explore). Child routes read the detail via the loader below. */
 export async function loader({ params }: Route.LoaderArgs) {
-  const [detail, samples] = await Promise.all([api.collection(params.name), api.samples()]);
-  return { detail, samples: samples.samples };
+  const [detail, samples, cols] = await Promise.all([api.collection(params.name), api.samples(), api.collections()]);
+  // other collections (for chaining as enrichment references)
+  const otherCollections = cols.collections.map((c) => c.name).filter((n) => n !== params.name);
+  return { detail, samples: samples.samples, otherCollections };
 }
 
 /** Collection-level management: recalc (rebuild merge on the current key) and delete. */
