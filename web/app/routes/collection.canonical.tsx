@@ -1,12 +1,11 @@
 import { Link, redirect, useRouteLoaderData } from "react-router";
-import type { Route } from "./+types/collection.model";
+import type { Route } from "./+types/collection.canonical";
 import { api } from "~/lib/api";
 import type { CollectionDetail } from "~/lib/types";
 import { MergeGraph } from "~/components/MergeGraph";
 import { CollectionSchema } from "~/components/CollectionSchema";
 import { CustomCanonicals } from "~/components/CustomCanonicals";
 import { FileMapping } from "~/components/FileMapping";
-import { EnrichmentJoins } from "~/components/EnrichmentJoins";
 
 export async function action({ request, params }: Route.ActionArgs) {
   const form = await request.formData();
@@ -19,28 +18,20 @@ export async function action({ request, params }: Route.ActionArgs) {
     await api.addCanonical(params.name, String(form.get("canon") ?? ""), String(form.get("type") ?? "keyword"), form.get("array") === "on");
   } else if (intent === "delete-canonical") {
     await api.deleteCanonical(params.name, String(form.get("canon")));
-  } else if (intent === "add-enrichment") {
-    const ref = String(form.get("ref") ?? "");
-    const joinField = String(form.get("join_field") ?? "");
-    // "collection:<name>" chains another collection; otherwise it's a sample file path
-    if (ref.startsWith("collection:")) await api.addEnrichment(params.name, { collection: ref.slice("collection:".length) }, joinField);
-    else if (ref) await api.addEnrichment(params.name, { source: ref }, joinField);
-  } else if (intent === "remove-enrichment") {
-    await api.removeEnrichment(params.name, String(form.get("source")));
   }
-  return redirect(`${base}/model`);
+  return redirect(`${base}/canonical`);
 }
 
-export default function Model({ params }: Route.ComponentProps) {
-  const parent = useRouteLoaderData("routes/collection") as { detail: CollectionDetail; samples: string[]; otherCollections: string[] };
-  const { detail, samples, otherCollections } = parent;
+export default function Canonical({ params }: Route.ComponentProps) {
+  const parent = useRouteLoaderData("routes/collection") as { detail: CollectionDetail };
+  const { detail } = parent;
   const base = `/collections/${encodeURIComponent(params.name)}`;
   const conflicts = detail.schema.reduce((n, s) => n + (s.conflicts ?? 0), 0);
 
   if (detail.files.length === 0) {
     return (
       <section className="card">
-        <h3>② Model</h3>
+        <h3>② Canonical</h3>
         <p className="hint">No sources yet — <Link to={base} className="to">add a source</Link> first.</p>
       </section>
     );
@@ -49,17 +40,16 @@ export default function Model({ params }: Route.ComponentProps) {
   return (
     <>
       <section className="card">
-        <h3>② Model <span className="mut">— unify columns into canonical fields, then fix anything wrong</span></h3>
+        <h3>② Canonical <span className="mut">— standardise columns into your unified set of fields</span></h3>
         <p className="hint">
-          {detail.schema.length} canonical fields from {detail.files.length} sources
+          Your merged data is standardised to {detail.schema.length} canonical fields across {detail.files.length} sources
           {conflicts > 0 && <> · <span className="no">⚠ {conflicts} value conflict{conflicts === 1 ? "" : "s"} to review</span></>}.
-          When it looks right, go to <Link to={`${base}/explore`} className="to">→ Explore</Link>.
+          Fix any wrong mappings here, then <Link to={`${base}/enrich`} className="to">→ Enrich</Link> to join other sets onto it.
         </p>
       </section>
 
       <MergeGraph detail={detail} />
       <CustomCanonicals detail={detail} />
-      <EnrichmentJoins detail={detail} samples={samples} collections={otherCollections} />
       <FileMapping detail={detail} />
       <CollectionSchema detail={detail} />
     </>

@@ -89,8 +89,8 @@ export default function Sources({ params }: Route.ComponentProps) {
         )}
         {detail.files.length > 0 && (
           <p className="hint" style={{ marginTop: 12 }}>
-            Next: <Link to={`${base}/model`} className="to">→ Model</Link> to review the unified schema, define
-            custom canonicals, and fix any mappings.
+            Next: <Link to={`${base}/canonical`} className="to">→ Canonical</Link> to review the unified schema,
+            define custom canonicals, and fix any mappings.
           </p>
         )}
       </section>

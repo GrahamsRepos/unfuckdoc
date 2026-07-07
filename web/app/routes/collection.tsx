@@ -30,9 +30,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 const STAGES = [
-  { to: "", label: "Sources", n: 1, hint: "ingest" },
-  { to: "model", label: "Model", n: 2, hint: "unify · canonicals · fixes" },
-  { to: "explore", label: "Explore", n: 3, hint: "query · segments" },
+  { to: "", label: "Sources", n: 1, hint: "merge files by key" },
+  { to: "canonical", label: "Canonical", n: 2, hint: "standardise → your set" },
+  { to: "enrich", label: "Enrich", n: 3, hint: "join other sets on" },
+  { to: "explore", label: "Explore", n: 4, hint: "search · segment · map" },
 ];
 
 export default function Collection({ loaderData, params }: Route.ComponentProps) {

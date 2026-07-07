@@ -5,7 +5,8 @@ export default [
   route("collections", "routes/collections.tsx"),
   route("collections/:name", "routes/collection.tsx", [
     index("routes/collection.sources.tsx"),
-    route("model", "routes/collection.model.tsx"),
+    route("canonical", "routes/collection.canonical.tsx"),
+    route("enrich", "routes/collection.enrich.tsx"),
     route("explore", "routes/collection.explore.tsx"),
   ]),
   route("match", "routes/match.tsx"),
