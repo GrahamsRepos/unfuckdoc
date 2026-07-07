@@ -198,6 +198,25 @@ class CollectionServiceTest {
     }
 
     @Test
+    fun `keyword search is punctuation and order independent`() {
+        val service = CollectionService(
+            Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
+            Consolidator(), unavailableOpenSearch(),
+        )
+        service.create("props", "email")
+        service.add("props", "p.csv", listOf("email", "description"), listOf(
+            mapOf("email" to "a@x.com", "description" to "Bright open-plan kitchen with island and city views"),
+            mapOf("email" to "b@x.com", "description" to "Cosy studio near the park"),
+        ))
+        // spaced query matches hyphenated text
+        assertEquals(1, service.search("props", "open plan kitchen", "", emptyList(), emptyList(), 10, 1)!!.total)
+        // order-independent, all terms required
+        assertEquals(1, service.search("props", "kitchen island", "", emptyList(), emptyList(), 10, 1)!!.total)
+        // a term not present -> no match
+        assertEquals(0, service.search("props", "open plan garage", "", emptyList(), emptyList(), 10, 1)!!.total)
+    }
+
+    @Test
     fun `orphan sweep deletes stale indexes but spares live collections`() {
         val opensearch = mockk<OpenSearchService>(relaxed = true)
         every { opensearch.available() } returns false   // keep merge in-memory

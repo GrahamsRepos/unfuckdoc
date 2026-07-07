@@ -245,7 +245,7 @@ class CollectionService @Inject constructor(
             if (sourceValues.isNotEmpty() && sourceFiles(d).none { it in sourceValues }) continue
             if (filters.any { f -> !Docs.filterMatch(Docs.fieldValues(d[f.field]), f.value, dtypes[f.field]) }) continue
             if (geo != null && !geoMatch(d[geo.field], geo, poly)) continue
-            if (ql.isNotEmpty() && ql !in Docs.blob(d)) continue
+            if (ql.isNotEmpty() && !Docs.textMatch(d, q)) continue
             if (total >= offset && out.size < safeSize) {
                 out.add(display.associateWith { col ->
                     when (col) {

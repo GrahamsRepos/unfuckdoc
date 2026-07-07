@@ -23,6 +23,16 @@ object Docs {
     fun blob(doc: Map<String, Any?>): String =
         doc.entries.filterNot { it.key.startsWith("_") }.joinToString(" ") { flattenText(it.value) }.lowercase()
 
+    private val nonAlnum = Regex("[^a-z0-9]+")
+
+    /** Keyword match: every term in the query must appear in the doc, punctuation- and order-
+     *  independent. So "open plan kitchen" matches "open-plan kitchen" (and vice versa). */
+    fun textMatch(doc: Map<String, Any?>, query: String): Boolean {
+        val norm = " " + nonAlnum.replace(blob(doc), " ").trim() + " "
+        val terms = nonAlnum.replace(query.lowercase(), " ").trim().split(' ').filter { it.isNotEmpty() }
+        return terms.all { norm.contains(it) }
+    }
+
     fun dtypeOf(osType: String?): String? = when (osType) {
         "double", "long", "integer", "float" -> "num"; "date" -> "date"; else -> null
     }
