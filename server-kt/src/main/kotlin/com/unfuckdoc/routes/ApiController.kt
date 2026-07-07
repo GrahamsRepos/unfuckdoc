@@ -188,6 +188,14 @@ class ApiController @Inject constructor(
                 ?: return@delete call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
         }
 
+        // ---- admin: orphaned-index cleanup ----
+        get("/api/admin/orphans") {
+            call.respond(mapOf("orphans" to collections.orphanIndexes()))
+        }
+        delete("/api/admin/orphans") {
+            call.respond(mapOf("deleted" to collections.cleanupOrphans()))
+        }
+
         // ---- match ----
         post("/api/match_candidates") {
             val r = call.receive<MatchCandidatesRequest>()

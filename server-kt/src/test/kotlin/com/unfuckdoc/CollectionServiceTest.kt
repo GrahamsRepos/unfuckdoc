@@ -197,6 +197,29 @@ class CollectionServiceTest {
         assertEquals("Blue", b.results.single()["company"])
     }
 
+    @Test
+    fun `orphan sweep deletes stale indexes but spares live collections`() {
+        val opensearch = mockk<OpenSearchService>(relaxed = true)
+        every { opensearch.available() } returns false   // keep merge in-memory
+        every { opensearch.listIndices("col_*") } returns listOf("col_keepme", "col_gone", "col_old")
+        every { opensearch.listIndices("kt_*") } returns listOf("kt_scratch")
+        val deleted = mutableListOf<String>()
+        every { opensearch.deleteIndex(any()) } answers { deleted.add(firstArg()) }
+
+        val service = CollectionService(
+            Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
+            Consolidator(),
+            opensearch,
+        )
+        service.create("keepme", "email")   // live -> index col_keepme
+
+        val orphans = service.orphanIndexes()
+        assertEquals(listOf("col_gone", "col_old", "kt_scratch"), orphans)  // col_keepme excluded
+
+        service.cleanupOrphans()
+        assertEquals(setOf("col_gone", "col_old", "kt_scratch"), deleted.toSet())
+    }
+
     private fun unavailableOpenSearch(): OpenSearchService {
         val opensearch = mockk<OpenSearchService>()
         every { opensearch.available() } returns false

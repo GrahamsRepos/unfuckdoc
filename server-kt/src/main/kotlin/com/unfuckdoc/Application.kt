@@ -44,6 +44,12 @@ fun Application.installApp(injector: Injector) {
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
     val injector = appInjector()
+    // in-memory collections don't survive a restart, but their OpenSearch indexes do; opt into a
+    // boot-time sweep of those orphans (col_*/kt_* with no live collection) with UNFUCK_SWEEP_ORPHANS=1.
+    if (System.getenv("UNFUCK_SWEEP_ORPHANS") != null) {
+        val removed = injector.getInstance<com.unfuckdoc.api.CollectionService>().cleanupOrphans()
+        println("swept ${removed.size} orphaned index(es): ${removed.joinToString()}")
+    }
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         installApp(injector)
         println("unfuckdoc-kt (Ktor + kotlin-guice) → http://localhost:$port")

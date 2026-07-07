@@ -55,6 +55,14 @@ class OpenSearchService(host: String = "localhost", port: Int = 9200) {
         if (c.indices().exists { it.index(index) }.value()) c.indices().delete { it.index(index) }
     }
 
+    /** List existing index names matching any of the given wildcard patterns (e.g. "col_*", "kt_*"). */
+    fun listIndices(vararg patterns: String): List<String> {
+        val c = client ?: return emptyList()
+        return runCatching {
+            c.indices().get { it.index(patterns.toList()).ignoreUnavailable(true) }.result().keys.sorted()
+        }.getOrDefault(emptyList())
+    }
+
     /** Run a raw query body ({"bool":{...}} / {"match_all":{}}) against the index; return hit sources. */
     fun search(index: String, queryJson: String, size: Int): List<Map<String, Any?>> {
         val c = client ?: error("OpenSearch unavailable")

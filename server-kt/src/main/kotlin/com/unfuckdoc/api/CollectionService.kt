@@ -69,6 +69,23 @@ class CollectionService @Inject constructor(
         runCatching { opensearch.deleteIndex(c.index) }
     }
 
+    private fun liveIndexes(): Set<String> = collections.values.map { it.index }.toSet()
+
+    /** App-managed OpenSearch indexes with no live collection behind them — the leak left after a
+     *  restart/crash (in-memory collections vanish but their `col_*` indexes persist), plus the
+     *  transient `kt_*` Explore/dataset scratch indexes (recreated on next load). */
+    fun orphanIndexes(): List<String> {
+        val live = liveIndexes()
+        return (opensearch.listIndices("col_*").filterNot { it in live } + opensearch.listIndices("kt_*")).distinct().sorted()
+    }
+
+    /** Delete the orphan indexes and return what was removed. */
+    fun cleanupOrphans(): List<String> {
+        val orphans = orphanIndexes()
+        orphans.forEach { runCatching { opensearch.deleteIndex(it) } }
+        return orphans
+    }
+
     fun add(name: String, filename: String, headers: List<String>, rows: List<Map<String, String?>>): CollectionAddResponse {
         val c = collections[name] ?: return CollectionAddResponse(error = "unknown collection")
         if (c.rawFiles.any { short(it.name) == short(filename) }) return CollectionAddResponse(error = "${short(filename)} already in collection")
