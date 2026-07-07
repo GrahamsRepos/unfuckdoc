@@ -3,6 +3,7 @@
 This document captures the next shape of the platform beyond CSV uploads:
 
 - JSON upload via API
+- SQL database ingestion (Postgres / MySQL / SQL Server / …)
 - multiple tenants
 - export paths
 - how all of that fits into the current OpenSearch-backed architecture
@@ -61,6 +62,9 @@ Each ingestion path becomes a thin adapter:
 - API adapter
   - accept single objects, batches, or NDJSON-like payloads
   - attach request metadata and tenant context
+- SQL adapter
+  - connect to an external database, run a query, stream rows into `SourceRecord`
+  - one dialect-agnostic path via JDBC; see §2b
 
 ### Supported JSON shapes
 
@@ -74,6 +78,88 @@ The JSON path should support:
 
 The adapter should not decide canonical meaning. It should only preserve structure and emit a
 consistent field map for downstream inference.
+
+---
+
+## 2b. SQL / database ingestion
+
+Pull directly from a customer's operational database (CRM/ERP replica, warehouse) instead of asking
+them to export CSVs. High value for the sales/RevOps use case — a Salesforce/HubSpot Postgres replica
+or a MySQL app DB becomes a live source with no manual export step.
+
+### One adapter, many dialects (JDBC)
+
+The JVM backend already gives us the cleanest path: **one `SqlAdapter` over JDBC**, with a driver per
+dialect. The adapter is dialect-agnostic; only the connection string + driver differ.
+
+- Postgres — `org.postgresql:postgresql`
+- MySQL / MariaDB — `com.mysql:mysql-connector-j` / `org.mariadb.jdbc:mariadb-java-client`
+- SQL Server — `com.microsoft.sqlserver:mssql-jdbc`
+- (later) Oracle, Snowflake, BigQuery, Redshift — same interface, different driver/JDBC URL
+- optionally wrap with a connection pool (HikariCP) and a query engine that federates (Trino/Calcite)
+  if we want cross-dialect SQL, but per-dialect JDBC is enough to start.
+
+```kotlin
+data class SqlSource(
+    val dialect: String,          // postgres | mysql | sqlserver | …
+    val jdbcUrl: String,          // jdbc:postgresql://host:5432/db
+    val credentialsRef: String,   // secret handle — never the raw password (see Security)
+    val query: String,            // SELECT … (or a table name -> SELECT *)
+    val incremental: IncrementalConfig? = null,
+)
+data class IncrementalConfig(val cursorColumn: String, val lastValue: String? = null) // e.g. updated_at / id
+```
+
+The adapter runs the query, maps each result row to a `SourceRecord` (column name -> field, preserving
+SQL types where useful: numeric/date/bool land as typed values so the classifier keeps its confidence),
+and streams into the same canonicalization pipeline as CSV/JSON. **Nothing downstream changes** — a DB
+row is just another `SourceRecord`.
+
+### Full load vs incremental sync
+
+- **Full load** — run the query, replace the source's contribution to the collection (re-merge).
+- **Incremental** — track a **cursor column** (`updated_at`, monotonic `id`, or CDC LSN); on each sync
+  pull only `WHERE cursor > lastValue`, upsert-merge by the association key, persist the new high-water
+  mark. This is what makes a DB source *live* rather than a one-shot import.
+- **Scheduling** — a source can be manual ("sync now"), interval (cron), or (later) event-driven via
+  logical-replication/CDC (Debezium) for near-real-time. Start with manual + interval.
+
+### Schema mapping
+
+- Column name -> field, straight into the existing name-canonicalizer (so `cust_email` -> `email`,
+  `acct_name` -> `company` work exactly as for CSV headers).
+- SQL types are a *hint*, not the decision — feed the values through the statistical classifier as
+  usual, but a declared `DATE`/`NUMERIC`/`BOOLEAN` column can seed the type with high confidence.
+- A single query can join across tables (`SELECT p.*, a.mrr, a.tier FROM people p JOIN accounts a …`)
+  so the customer denormalizes relational data into one flat source — which is exactly what the
+  many-to-many discussion concluded we want (denormalize at ingest, don't join in OpenSearch).
+
+### Security (this is the sensitive part)
+
+- **Read-only, least-privilege credentials** — request a dedicated read-only DB user; never write.
+- **Never store raw passwords** — connection secrets go in a secret manager (Vault/KMS); the source
+  holds only a `credentialsRef`. Same rule as the browser-automation credential boundary.
+- **Prefer a replica / read-endpoint** so ingestion never loads the customer's primary.
+- **Network** — support SSH tunnel / VPC peering / IP allow-listing / TLS-required connections for
+  self-hosted DBs; for cloud DBs, PrivateLink where available.
+- **PII stays in-tenant** — the same tenant-isolation and self-host-embeddings rules apply; a SQL
+  source doesn't change where data lives, only how it arrives.
+- **Query allow-listing** — validate/parameterize the query; block writes/DDL; cap result size and
+  statement timeout to protect both sides.
+
+### API surface (sketch)
+
+- `POST /api/collections/{name}/sources/sql` — register a SQL source (connection + query + schedule).
+- `POST /api/collections/{name}/sources/{id}/sync` — trigger a sync (full or incremental).
+- `GET  /api/collections/{name}/sources/{id}` — status, last sync, high-water mark, row counts.
+- Test-connection endpoint that runs `SELECT 1` / a `LIMIT 5` preview before saving.
+
+### Why it fits cleanly
+
+The `SourceRecord` envelope from §2 already makes the engine source-agnostic — SQL is just a fourth
+adapter emitting the same shape. The only genuinely new machinery is **connection management + secret
+handling + incremental cursors + scheduling**; canonicalization, merge, indexing, and search are
+untouched.
 
 ---
 
