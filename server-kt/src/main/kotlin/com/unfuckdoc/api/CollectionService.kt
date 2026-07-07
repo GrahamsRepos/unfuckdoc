@@ -5,6 +5,7 @@ import com.unfuckdoc.domain.Dsl
 import com.unfuckdoc.domain.Embedder
 import com.unfuckdoc.domain.LlmClient
 import com.unfuckdoc.domain.Pipeline
+import com.unfuckdoc.domain.TransformEngine
 import com.unfuckdoc.opensearch.OpenSearchService
 import jakarta.inject.Inject
 import kotlinx.serialization.json.Json as KJson
@@ -33,6 +34,7 @@ class CollectionService @Inject constructor(
     private val llm: LlmClient,
 ) {
     private data class ExtractSpec(val name: String, val osType: String, val values: List<String>)
+    private val transformEngine = TransformEngine()
     private class Agg(var osType: String?, var kind: String, var cardinality: String) {
         val sources = mutableListOf<String>()
         var count = 0
@@ -55,6 +57,7 @@ class CollectionService @Inject constructor(
         val customCanonicals = LinkedHashMap<String, String>()            // user-defined canonical -> osType
         val customArrays = LinkedHashSet<String>()                        // customs declared multi-value (list)
         val enrichments = mutableListOf<Enrich>()                         // lookup joins: attach fields from a reference
+        val transforms = mutableListOf<Pair<String, String>>()            // (output field, DSL expression), applied pre-process
         val extractSpecs = mutableListOf<ExtractSpec>()                   // LLM-extracted attributes from free text
         val extractCache = HashMap<String, Map<String, Any?>>()          // (text|specs) -> extracted values, to skip re-calling the LLM
         var vectors: List<FloatArray>? = null      // per-entity embeddings of the free-text field(s); lazy
@@ -211,6 +214,34 @@ class CollectionService @Inject constructor(
         c.vectors = null
     }
 
+    /** Define a row-level transform: output field + a safe-DSL expression, applied before processing.
+     *  Blank expression removes the transform. Compilation errors are returned (no unsafe code runs). */
+    fun setTransform(name: String, field: String, expr: String): CollectionAddResponse {
+        val c = collections[name] ?: return CollectionAddResponse(error = "unknown collection")
+        val fn = field.trim().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+        if (fn.isEmpty()) return CollectionAddResponse(error = "invalid field name")
+        c.transforms.removeAll { it.first == fn }
+        if (expr.isNotBlank()) {
+            runCatching { transformEngine.compile(expr) }.onFailure { return CollectionAddResponse(error = "expression error: ${it.message}") }
+            c.transforms.add(fn to expr.trim())
+        }
+        rebuild(c); c.opensearch = reindex(c)
+        return CollectionAddResponse(added = fn, detail = detail(c))
+    }
+
+    /** Run every transform over the raw rows, adding/overwriting its output column. Header order: the
+     *  file's columns plus any new transform outputs. */
+    private fun applyTransforms(c: Collection, headers: List<String>, rows: List<Map<String, String?>>): Pair<List<String>, List<Map<String, String?>>> {
+        val compiled = c.transforms.mapNotNull { (fld, ex) -> runCatching { transformEngine.compile(ex) }.getOrNull()?.let { fld to it } }
+        val outHeaders = (headers + compiled.map { it.first }).distinct()
+        val outRows = rows.map { row ->
+            val m = LinkedHashMap<String, String?>(row)
+            for ((fld, e) in compiled) m[fld] = runCatching { e.eval(row) }.getOrNull()
+            m
+        }
+        return outHeaders to outRows
+    }
+
     private val extractTypes = setOf("keyword", "boolean", "long", "double")
 
     /** Define an LLM-extracted attribute (name + type, optional enum values) and populate it from
@@ -292,7 +323,9 @@ class CollectionService @Inject constructor(
     }
 
     /** Process one file (honouring overrides) and dedup-merge its records into the collection. */
-    private fun ingest(c: Collection, filename: String, headers: List<String>, rows: List<Map<String, String?>>): List<FileMappingEntry> {
+    private fun ingest(c: Collection, filename: String, rawHeaders: List<String>, rawRows: List<Map<String, String?>>): List<FileMappingEntry> {
+        // row-level transforms mutate values BEFORE classification/canonicalization (OpenRefine-style)
+        val (headers, rows) = if (c.transforms.isEmpty()) rawHeaders to rawRows else applyTransforms(c, rawHeaders, rawRows)
         val result = pipeline.process(filename, headers, rows, c.overrides)
         val cons = consolidator.consolidate(rows, result.columns)
         val mapping = result.columns.filter { it.searchable }
@@ -546,7 +579,8 @@ class CollectionService @Inject constructor(
         val extractions = c.extractSpecs.map { s -> ExtractedAttribute(s.name, s.osType, s.values, c.entities.count { it[s.name] != null }) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,
             schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch,
-            collectionTags(c), custom, embedder.enabled && textFields(c).isNotEmpty(), enrichments, extractions, llm.enabled)
+            collectionTags(c), custom, embedder.enabled && textFields(c).isNotEmpty(), enrichments, extractions, llm.enabled,
+            c.transforms.map { FieldTransform(it.first, it.second) })
     }
 
     private val wordRe = Regex("[A-Za-z][A-Za-z0-9'-]{2,}")

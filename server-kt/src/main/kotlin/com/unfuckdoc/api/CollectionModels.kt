@@ -60,6 +60,11 @@ data class EnrichmentJoin(val source: String, val joinField: String, val attache
 @Serializable
 data class ExtractedAttribute(val name: String, val osType: String, val values: List<String> = emptyList(), val filled: Int = 0)
 
+/** A row-level field transform (safe expression DSL) applied before processing — e.g.
+ *  field="price", expr='to_number(strip(raw_price, "$,"))'. */
+@Serializable
+data class FieldTransform(val field: String, val expr: String)
+
 @Serializable
 data class CollectionDetail(
     val name: String, val index: String, val nRecords: Int,
@@ -72,6 +77,7 @@ data class CollectionDetail(
     val enrichments: List<EnrichmentJoin> = emptyList(),
     val extractions: List<ExtractedAttribute> = emptyList(),
     val llmAvailable: Boolean = false,
+    val transforms: List<FieldTransform> = emptyList(),
 )
 
 @Serializable

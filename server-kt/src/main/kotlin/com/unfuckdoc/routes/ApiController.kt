@@ -48,6 +48,7 @@ import java.io.File
 @Serializable data class CustomCanonicalRequest(val name: String, val type: String = "keyword", val array: Boolean = false)
 @Serializable data class EnrichRequest(val source: String = "", val collection: String = "", val joinField: String)
 @Serializable data class ExtractRequest(val name: String, val type: String = "keyword", val values: List<String> = emptyList())
+@Serializable data class TransformRequest(val field: String, val expr: String = "")
 @Serializable data class CollectionKeyRequest(val key: String)
 @Serializable data class MatchCandidatesRequest(val a: String, val b: String)
 @Serializable data class MatchRequest(val a: String, val b: String, val key: String? = null, val threshold: Double = 0.85)
@@ -156,6 +157,11 @@ class ApiController @Inject constructor(
             val req = call.receive<CollectionSearchRequest>()
             call.respond(collections.search(call.parameters["name"]!!, req.q, req.tag, req.sourceFiles, req.filters, req.size, req.page, req.geo, req.mode)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
+        }
+
+        post("/api/collections/{name}/transform") {
+            val req = call.receive<TransformRequest>()
+            call.respond(collections.setTransform(call.parameters["name"]!!, req.field, req.expr))
         }
 
         post("/api/collections/{name}/extract") {

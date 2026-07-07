@@ -62,6 +62,9 @@ export const api = {
   removeEnrichment: async (name: string, source: string) => {
     await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/enrich/${encodeURIComponent(source)}`, { method: "DELETE" });
   },
+  setTransform: (name: string, field: string, expr: string) =>
+    postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(
+      `/api/collections/${encodeURIComponent(name)}/transform`, { field, expr }),
   addExtraction: (name: string, attr: string, type: string, values: string[]) =>
     postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(
       `/api/collections/${encodeURIComponent(name)}/extract`, { name: attr, type, values }),

@@ -5,6 +5,7 @@ import type { CollectionDetail } from "~/lib/types";
 import { MergeGraph } from "~/components/MergeGraph";
 import { CollectionSchema } from "~/components/CollectionSchema";
 import { CustomCanonicals } from "~/components/CustomCanonicals";
+import { FieldTransforms } from "~/components/FieldTransforms";
 import { ExtractedAttributes } from "~/components/ExtractedAttributes";
 import { FileMapping } from "~/components/FileMapping";
 
@@ -24,6 +25,9 @@ export async function action({ request, params }: Route.ActionArgs) {
     await api.addExtraction(params.name, String(form.get("attr") ?? ""), String(form.get("type") ?? "keyword"), values);
   } else if (intent === "remove-extraction") {
     await api.removeExtraction(params.name, String(form.get("attr")));
+  } else if (intent === "set-transform") {
+    const res = await api.setTransform(params.name, String(form.get("field") ?? ""), String(form.get("expr") ?? ""));
+    if (res.error) return { error: res.error };   // surface expression errors, don't redirect
   }
   return redirect(`${base}/canonical`);
 }
@@ -55,6 +59,7 @@ export default function Canonical({ params }: Route.ComponentProps) {
       </section>
 
       <MergeGraph detail={detail} />
+      <FieldTransforms detail={detail} />
       <CustomCanonicals detail={detail} />
       <ExtractedAttributes detail={detail} />
       <FileMapping detail={detail} />
