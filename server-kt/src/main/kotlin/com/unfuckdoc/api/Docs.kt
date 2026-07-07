@@ -73,4 +73,39 @@ object Docs {
 
     private fun cmpNum(op: String, x: Double, t: Double) = when (op) { ">" -> x > t; ">=" -> x >= t; "<" -> x < t; "<=" -> x <= t; else -> x == t }
     private fun cmpStr(op: String, x: String, t: String) = when (op) { ">" -> x > t; ">=" -> x >= t; "<" -> x < t; "<=" -> x <= t; else -> x == t }
+
+    // ---- geo ----
+    private val geoRe = Regex("^\\s*(-?\\d{1,3}\\.\\d+)\\s*[, ]\\s*(-?\\d{1,3}\\.\\d+)\\s*$")
+
+    /** Parse a coordinate field value into (lat, lng), from a "lat,lng" string or {lat,lon} map. */
+    fun parseLatLng(v: Any?): Pair<Double, Double>? = when (v) {
+        null -> null
+        is Map<*, *> -> {
+            val lat = (v["lat"] as? Number)?.toDouble() ?: v["lat"]?.toString()?.toDoubleOrNull()
+            val lng = ((v["lon"] ?: v["lng"]) as? Number)?.toDouble() ?: (v["lon"] ?: v["lng"])?.toString()?.toDoubleOrNull()
+            if (lat != null && lng != null) lat to lng else null
+        }
+        else -> geoRe.matchEntire(v.toString().trim())?.let {
+            val lat = it.groupValues[1].toDoubleOrNull(); val lng = it.groupValues[2].toDoubleOrNull()
+            if (lat != null && lng != null) lat to lng else null
+        }
+    }
+
+    fun inBbox(p: Pair<Double, Double>, minLat: Double, minLng: Double, maxLat: Double, maxLng: Double): Boolean =
+        p.first in minLat..maxLat && p.second in minLng..maxLng
+
+    /** Ray-casting point-in-polygon. `poly` is a ring of [lat, lng] vertices. */
+    fun inPolygon(p: Pair<Double, Double>, poly: List<Pair<Double, Double>>): Boolean {
+        if (poly.size < 3) return false
+        val (lat, lng) = p
+        var inside = false
+        var j = poly.size - 1
+        for (i in poly.indices) {
+            val (latI, lngI) = poly[i]; val (latJ, lngJ) = poly[j]
+            if ((lngI > lng) != (lngJ > lng) &&
+                lat < (latJ - latI) * (lng - lngI) / (lngJ - lngI) + latI) inside = !inside
+            j = i
+        }
+        return inside
+    }
 }

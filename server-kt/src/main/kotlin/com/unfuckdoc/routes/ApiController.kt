@@ -3,6 +3,7 @@ package com.unfuckdoc.routes
 import com.unfuckdoc.api.CollectionService
 import com.unfuckdoc.api.DatasetService
 import com.unfuckdoc.api.FieldFilter
+import com.unfuckdoc.api.GeoFilter
 import com.unfuckdoc.api.MatchService
 import com.unfuckdoc.domain.CsvReader
 import io.ktor.http.ContentType
@@ -39,7 +40,7 @@ import java.io.File
     val q: String = "", val tag: String = "",
     @SerialName("source_files") val sourceFiles: List<String> = emptyList(),
     val filters: List<FieldFilter> = emptyList(), val size: Int = 30,
-    val page: Int = 1,
+    val page: Int = 1, val geo: GeoFilter? = null,
 )
 @Serializable data class SegmentRequest(val name: String, val filters: List<FieldFilter> = emptyList())
 @Serializable data class MappingOverrideRequest(val column: String, val canonical: String = "")
@@ -150,7 +151,7 @@ class ApiController @Inject constructor(
 
         post("/api/collections/{name}/search") {
             val req = call.receive<CollectionSearchRequest>()
-            call.respond(collections.search(call.parameters["name"]!!, req.q, req.tag, req.sourceFiles, req.filters, req.size, req.page)
+            call.respond(collections.search(call.parameters["name"]!!, req.q, req.tag, req.sourceFiles, req.filters, req.size, req.page, req.geo)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
         }
 

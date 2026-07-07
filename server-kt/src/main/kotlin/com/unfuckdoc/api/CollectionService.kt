@@ -226,6 +226,7 @@ class CollectionService @Inject constructor(
         filters: List<FieldFilter>,
         size: Int,
         page: Int,
+        geo: GeoFilter? = null,
     ): CollectionSearchResponse? {
         val c = collections[name] ?: return null
         val display = collDisplay(c)
@@ -233,6 +234,7 @@ class CollectionService @Inject constructor(
         val ql = q.lowercase()
         val tagValue = tag.trim()
         val sourceValues = sourceFiles.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val poly = geo?.polygon?.mapNotNull { if (it.size >= 2) it[0] to it[1] else null }
         val safeSize = size.coerceAtLeast(1)
         val safePage = page.coerceAtLeast(1)
         val offset = ((safePage - 1).toLong() * safeSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -242,6 +244,7 @@ class CollectionService @Inject constructor(
             if (tagValue.isNotEmpty() && !entityTags(c, d).contains(tagValue)) continue
             if (sourceValues.isNotEmpty() && sourceFiles(d).none { it in sourceValues }) continue
             if (filters.any { f -> !Docs.filterMatch(Docs.fieldValues(d[f.field]), f.value, dtypes[f.field]) }) continue
+            if (geo != null && !geoMatch(d[geo.field], geo, poly)) continue
             if (ql.isNotEmpty() && ql !in Docs.blob(d)) continue
             if (total >= offset && out.size < safeSize) {
                 out.add(display.associateWith { col ->
@@ -280,6 +283,16 @@ class CollectionService @Inject constructor(
 
     private fun sourceFiles(entity: Map<String, Any?>): List<String> =
         sources(entity).map { short(it) }.distinct().sorted()
+
+    /** True if any coordinate value of the entity's geo field falls in the bbox / polygon. */
+    private fun geoMatch(value: Any?, geo: GeoFilter, poly: List<Pair<Double, Double>>?): Boolean {
+        val points = Docs.fieldValues(value).mapNotNull { Docs.parseLatLng(it) }
+        if (points.isEmpty()) return false
+        return points.any { p ->
+            (geo.bbox?.let { it.size == 4 && Docs.inBbox(p, it[0], it[1], it[2], it[3]) } ?: false) ||
+                (poly?.let { Docs.inPolygon(p, it) } ?: false)
+        }
+    }
 
     private fun segmentCount(c: Collection, filters: List<FieldFilter>): Int {
         val dtypes = c.schema.mapValues { Docs.dtypeOf(it.value.osType) }

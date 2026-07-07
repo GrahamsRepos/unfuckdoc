@@ -30,6 +30,13 @@ data class Segment(val name: String, val filters: List<FieldFilter>, val count: 
 @Serializable
 data class CollectionTag(val tag: String, val count: Int)
 
+/** Geo constraint on a geo_point field: a bounding box [minLat,minLng,maxLat,maxLng] OR a polygon
+ *  ring of [lat,lng] vertices. */
+@Serializable
+data class GeoFilter(
+    val field: String, val bbox: List<Double>? = null, val polygon: List<List<Double>>? = null,
+)
+
 /** A user-defined canonical field: a named target (with a declared type) that columns can be mapped
  *  onto, offered in the mapping dropdowns alongside the built-in canonicals. `array` = multi-value:
  *  the field holds a list (delimited cells are split; multiple columns/files union). */

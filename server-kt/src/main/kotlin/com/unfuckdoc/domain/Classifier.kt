@@ -19,6 +19,16 @@ class Classifier @Inject constructor() {
         "MMM d, yyyy", "MMM d yyyy", "dd-MM-yyyy", "yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyy-MM-dd'T'HH:mm:ss",
     ).map { DateTimeFormatter.ofPattern(it) }
 
+    // a coordinate pair "lat,lng" / "lat lng"; decimals required in both parts so European decimal
+    // commas ("12,34") and plain integers don't false-positive as geo.
+    private val geoRe = Regex("^\\s*(-?\\d{1,3}\\.\\d+)\\s*[, ]\\s*(-?\\d{1,3}\\.\\d+)\\s*$")
+    private fun isGeo(v: String): Boolean {
+        val m = geoRe.matchEntire(v.trim()) ?: return false
+        val lat = m.groupValues[1].toDoubleOrNull() ?: return false
+        val lng = m.groupValues[2].toDoubleOrNull() ?: return false
+        return lat in -90.0..90.0 && lng in -180.0..180.0
+    }
+
     private fun denum(s: String) = money.replace(s, "")
     private fun isNum(v: String) = denum(v).toDoubleOrNull() != null
     private fun isDate(v: String): Boolean {
@@ -40,13 +50,17 @@ class Classifier @Inject constructor() {
         val avgWords = v.map { it.trim().split(Regex("\\s+")).filter { w -> w.isNotEmpty() }.size }.average()
         val numf = v.count { isNum(it) }.toDouble() / n
 
+        val geof = v.count { isGeo(it) }.toDouble() / n
+
         val scores = mutableMapOf<String, Double>()
+        scores["geo_point"] = if (geof >= 0.7) geof else 0.0
         scores["numeric"] = numf
         scores["boolean"] = if (uniq <= 3) v.count { it.lowercase() in bool }.toDouble() / n else 0.0
         scores["date"] = if (numf < 0.5 && avgWords <= 3 && avgLen >= 6) v.count { isDate(it) }.toDouble() / n else 0.0
         scores["free_text"] = if (avgWords >= 12) minOf(1.0, avgWords / 25.0) else 0.0
 
-        val isStr = numf < 0.5 && scores["free_text"] == 0.0
+        // geo dominates when detected — don't also treat coordinate strings as enum/identifier
+        val isStr = numf < 0.5 && scores["free_text"] == 0.0 && scores["geo_point"] == 0.0
         scores["enum"] = if (isStr && uniq <= 50 && ratio <= 0.6) 0.8 else 0.0
         scores["identifier"] = if (isStr && scores["enum"] == 0.0) 0.7 else 0.0
 
@@ -77,6 +91,7 @@ class Classifier @Inject constructor() {
         val OS_TYPE = mapOf(
             "boolean" to "boolean", "numeric" to "double", "date" to "date",
             "enum" to "keyword", "identifier" to "keyword", "free_text" to "text",
+            "geo_point" to "geo_point",
         )
     }
 }

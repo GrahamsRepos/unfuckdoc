@@ -30,6 +30,7 @@ class Canonicalizer @Inject constructor() {
         Canon("country", setOf("country", "cntry", "ctry", "nation", "countrycode"), str),
         Canon("region", setOf("region", "state", "province", "county", "territory", "area"), str),
         Canon("interests", setOf("interest", "interests", "hobby", "hobbies", "topic", "topics"), setOf("enum", "identifier")),
+        Canon("location", setOf("location", "coordinates", "coords", "latlng", "latlong", "geo", "geopoint", "position", "point"), setOf("geo_point")),
         Canon("city", setOf("city", "town", "municipality"), str),
         Canon("address", setOf("address", "addr", "street"), null),
         Canon("postal_code", setOf("zip", "zipcode", "postal", "postcode", "postalcode"), str),
