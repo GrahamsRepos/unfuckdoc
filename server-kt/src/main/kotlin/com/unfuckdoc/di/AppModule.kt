@@ -11,6 +11,7 @@ import com.unfuckdoc.domain.Embedder
 import com.unfuckdoc.domain.IndexBuilder
 import com.unfuckdoc.domain.MiniLmEmbedder
 import com.unfuckdoc.domain.NoopEmbedder
+import com.unfuckdoc.domain.OpenAiEmbedder
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.domain.SemanticCanonicalizer
 import com.unfuckdoc.opensearch.OpenSearchService
@@ -37,11 +38,18 @@ class AppModule : KotlinModule() {
         bind<MatchService>().`in`<Singleton>()
         bind<ApiController>().`in`<Singleton>()
 
-        // real neural embeddings for semantic field-name matching, unless UNFUCK_NO_EMBED=1
-        if (System.getenv("UNFUCK_NO_EMBED") != null)
-            bind<Embedder>().toInstance(NoopEmbedder)
-        else
-            bind<Embedder>().to<MiniLmEmbedder>().`in`<Singleton>()
+        // embeddings for semantic field-name matching + semantic search:
+        //   UNFUCK_NO_EMBED=1        -> off
+        //   EMBED_BASE_URL set       -> any OpenAI-compatible endpoint (Ollama nomic/bge, OVH, …)
+        //   default                  -> in-process all-MiniLM-L6-v2 via DJL
+        val embedBase = System.getenv("EMBED_BASE_URL")
+        when {
+            System.getenv("UNFUCK_NO_EMBED") != null -> bind<Embedder>().toInstance(NoopEmbedder)
+            embedBase != null -> bind<Embedder>().toInstance(
+                OpenAiEmbedder(embedBase, System.getenv("EMBED_MODEL") ?: "nomic-embed-text", System.getenv("EMBED_API_KEY"))
+            )
+            else -> bind<Embedder>().to<MiniLmEmbedder>().`in`<Singleton>()
+        }
 
         // constructed from env config
         bind<OpenSearchService>().toInstance(
