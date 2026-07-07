@@ -5,6 +5,7 @@ import type { CollectionDetail } from "~/lib/types";
 import { MergeGraph } from "~/components/MergeGraph";
 import { CollectionSchema } from "~/components/CollectionSchema";
 import { CustomCanonicals } from "~/components/CustomCanonicals";
+import { ExtractedAttributes } from "~/components/ExtractedAttributes";
 import { FileMapping } from "~/components/FileMapping";
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -18,6 +19,11 @@ export async function action({ request, params }: Route.ActionArgs) {
     await api.addCanonical(params.name, String(form.get("canon") ?? ""), String(form.get("type") ?? "keyword"), form.get("array") === "on");
   } else if (intent === "delete-canonical") {
     await api.deleteCanonical(params.name, String(form.get("canon")));
+  } else if (intent === "add-extraction") {
+    const values = String(form.get("values") ?? "").split(",").map((v) => v.trim()).filter(Boolean);
+    await api.addExtraction(params.name, String(form.get("attr") ?? ""), String(form.get("type") ?? "keyword"), values);
+  } else if (intent === "remove-extraction") {
+    await api.removeExtraction(params.name, String(form.get("attr")));
   }
   return redirect(`${base}/canonical`);
 }
@@ -50,6 +56,7 @@ export default function Canonical({ params }: Route.ComponentProps) {
 
       <MergeGraph detail={detail} />
       <CustomCanonicals detail={detail} />
+      <ExtractedAttributes detail={detail} />
       <FileMapping detail={detail} />
       <CollectionSchema detail={detail} />
     </>

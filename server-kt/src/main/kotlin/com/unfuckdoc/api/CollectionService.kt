@@ -3,9 +3,16 @@ package com.unfuckdoc.api
 import com.unfuckdoc.domain.Consolidator
 import com.unfuckdoc.domain.Dsl
 import com.unfuckdoc.domain.Embedder
+import com.unfuckdoc.domain.LlmClient
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.opensearch.OpenSearchService
 import jakarta.inject.Inject
+import kotlinx.serialization.json.Json as KJson
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -23,7 +30,9 @@ class CollectionService @Inject constructor(
     private val consolidator: Consolidator,
     private val opensearch: OpenSearchService,
     private val embedder: Embedder,
+    private val llm: LlmClient,
 ) {
+    private data class ExtractSpec(val name: String, val osType: String, val values: List<String>)
     private class Agg(var osType: String?, var kind: String, var cardinality: String) {
         val sources = mutableListOf<String>()
         var count = 0
@@ -46,6 +55,8 @@ class CollectionService @Inject constructor(
         val customCanonicals = LinkedHashMap<String, String>()            // user-defined canonical -> osType
         val customArrays = LinkedHashSet<String>()                        // customs declared multi-value (list)
         val enrichments = mutableListOf<Enrich>()                         // lookup joins: attach fields from a reference
+        val extractSpecs = mutableListOf<ExtractSpec>()                   // LLM-extracted attributes from free text
+        val extractCache = HashMap<String, Map<String, Any?>>()          // (text|specs) -> extracted values, to skip re-calling the LLM
         var vectors: List<FloatArray>? = null      // per-entity embeddings of the free-text field(s); lazy
         var rawRecords = 0
         var merged = 0
@@ -101,6 +112,7 @@ class CollectionService @Inject constructor(
         c.rawFiles.add(RawFile(filename, headers, rows))
         val mapping = ingest(c, filename, headers, rows)
         if (c.enrichments.isNotEmpty()) applyEnrichments(c)   // re-attach lookups to the new entities
+        if (c.extractSpecs.isNotEmpty()) applyExtraction(c)   // extract attributes for the new entities
         c.opensearch = reindex(c)
         return CollectionAddResponse(added = short(filename), mapping = mapping, detail = detail(c))
     }
@@ -199,12 +211,84 @@ class CollectionService @Inject constructor(
         c.vectors = null
     }
 
-    /** Re-run classify -> (override-aware) canonicalize -> merge over every retained file, then joins. */
+    private val extractTypes = setOf("keyword", "boolean", "long", "double")
+
+    /** Define an LLM-extracted attribute (name + type, optional enum values) and populate it from
+     *  each entity's free text. Fixes negation/logic that vector search can't ("no garden" -> false). */
+    fun addExtraction(name: String, attr: String, type: String, values: List<String>): CollectionAddResponse {
+        val c = collections[name] ?: return CollectionAddResponse(error = "unknown collection")
+        if (!llm.enabled) return CollectionAddResponse(error = "no LLM configured (set LLM_BASE_URL)")
+        if (textFields(c).isEmpty()) return CollectionAddResponse(error = "collection has no free-text field to extract from")
+        val an = attr.trim().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+        if (an.isEmpty()) return CollectionAddResponse(error = "invalid attribute name")
+        c.extractSpecs.removeAll { it.name == an }
+        c.extractSpecs.add(ExtractSpec(an, type.takeIf { it in extractTypes } ?: "keyword", values.map { it.trim() }.filter { it.isNotEmpty() }))
+        c.extractCache.clear()   // spec set changed -> re-extract
+        rebuild(c); c.opensearch = reindex(c)
+        return CollectionAddResponse(added = an, detail = detail(c))
+    }
+
+    fun removeExtraction(name: String, attr: String): CollectionDetail? {
+        val c = collections[name] ?: return null
+        c.extractSpecs.removeAll { it.name == attr }
+        c.extractCache.clear()
+        rebuild(c); c.opensearch = reindex(c)
+        return detail(c)
+    }
+
+    /** One LLM call per entity fills all defined attributes from its free text (cached by text+specs). */
+    private fun applyExtraction(c: Collection) {
+        if (c.extractSpecs.isEmpty() || !llm.enabled) return
+        val fields = textFields(c)
+        val specKey = c.extractSpecs.joinToString("|") { "${it.name}:${it.osType}:${it.values.joinToString(",")}" }
+        val system = "You extract structured attributes from a property/record description. Reply with a " +
+            "STRICT JSON object and nothing else. Keys and types:\n" +
+            c.extractSpecs.joinToString("\n") { s ->
+                val t = when (s.osType) { "boolean" -> "boolean (true/false)"; "long", "double" -> "number"; else ->
+                    if (s.values.isNotEmpty()) "one of ${s.values}" else "short string" }
+                "- ${s.name}: $t"
+            } + "\nUse the negation and wording carefully (e.g. 'no garden' -> has_garden false). " +
+            "If a value is not stated, use null."
+        for (e in c.entities) {
+            val text = fields.joinToString(" ") { Docs.flattenText(e[it]) }.trim()
+            if (text.isEmpty()) continue
+            val cacheKey = "$specKey||$text"
+            val extracted = c.extractCache.getOrPut(cacheKey) {
+                runCatching {
+                    val obj = KJson.parseToJsonElement(llm.completeJson(system, text)).jsonObject
+                    c.extractSpecs.associate { s -> s.name to coerce(obj[s.name]?.jsonPrimitive, s.osType) }
+                }.getOrDefault(emptyMap())
+            }
+            for ((k, v) in extracted) if (v != null) e[k] = v
+        }
+        // register the extracted attributes as typed schema fields
+        for (s in c.extractSpecs) {
+            val agg = c.schema.getOrPut(s.name) { Agg(s.osType, kindFor(s.osType), "scalar") }
+            agg.osType = s.osType
+            if ("(extracted)" !in agg.sources) agg.sources.add("(extracted)")
+            agg.count = c.entities.count { it[s.name] != null }
+        }
+        c.vectors = null
+    }
+
+    private fun coerce(p: kotlinx.serialization.json.JsonPrimitive?, osType: String): Any? {
+        if (p == null || p.contentOrNull == null || p.contentOrNull.equals("null", true)) return null
+        return when (osType) {
+            "boolean" -> p.booleanOrNull ?: p.contentOrNull?.toBooleanStrictOrNull()
+            "long" -> p.doubleOrNull?.toLong()
+            "double" -> p.doubleOrNull
+            else -> p.contentOrNull
+        }
+    }
+    private fun kindFor(osType: String) = when (osType) { "boolean" -> "boolean"; "long", "double" -> "numeric"; else -> "enum" }
+
+    /** Re-run classify -> (override-aware) canonicalize -> merge over every retained file, then joins, then extraction. */
     private fun rebuild(c: Collection) {
         c.schema.clear(); c.files.clear(); c.entities.clear(); c.keyIndex.clear()
         c.rawRecords = 0; c.merged = 0
         for (rf in c.rawFiles) ingest(c, rf.name, rf.headers, rf.rows)
         applyEnrichments(c)
+        applyExtraction(c)
     }
 
     /** Process one file (honouring overrides) and dedup-merge its records into the collection. */
@@ -459,9 +543,10 @@ class CollectionService @Inject constructor(
         val segments = c.segments.map { (n, f) -> Segment(n, f, segmentCount(c, f)) }
         val custom = c.customCanonicals.entries.map { (n, t) -> CustomCanonical(n, t, n in c.customArrays, c.schema.containsKey(n)) }
         val enrichments = c.enrichments.map { EnrichmentJoin(short(it.source), it.joinField, it.attached, it.matched, it.refCollection != null) }
+        val extractions = c.extractSpecs.map { s -> ExtractedAttribute(s.name, s.osType, s.values, c.entities.count { it[s.name] != null }) }
         return CollectionDetail(c.name, c.index, c.entities.size, c.keyField, c.rawRecords, c.merged,
             schema, c.files.map { CollectionFileDto(short(it.name), it.rows, it.mapping) }, segments, c.opensearch,
-            collectionTags(c), custom, embedder.enabled && textFields(c).isNotEmpty(), enrichments)
+            collectionTags(c), custom, embedder.enabled && textFields(c).isNotEmpty(), enrichments, extractions, llm.enabled)
     }
 
     private val wordRe = Regex("[A-Za-z][A-Za-z0-9'-]{2,}")

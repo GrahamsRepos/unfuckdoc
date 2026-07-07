@@ -55,6 +55,11 @@ data class CustomCanonical(val name: String, val osType: String, val array: Bool
 @Serializable
 data class EnrichmentJoin(val source: String, val joinField: String, val attached: List<String>, val matched: Int, val fromCollection: Boolean = false)
 
+/** A structured attribute extracted from free-text by the LLM (e.g. has_garden:boolean from a
+ *  description) — becomes a typed, filterable field. `values` optionally constrains an enum. */
+@Serializable
+data class ExtractedAttribute(val name: String, val osType: String, val values: List<String> = emptyList(), val filled: Int = 0)
+
 @Serializable
 data class CollectionDetail(
     val name: String, val index: String, val nRecords: Int,
@@ -65,6 +70,8 @@ data class CollectionDetail(
     val customCanonicals: List<CustomCanonical> = emptyList(),
     val semanticSearch: Boolean = false,   // vector search available (embeddings on + a free-text field)
     val enrichments: List<EnrichmentJoin> = emptyList(),
+    val extractions: List<ExtractedAttribute> = emptyList(),
+    val llmAvailable: Boolean = false,
 )
 
 @Serializable

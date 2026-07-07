@@ -62,6 +62,12 @@ export const api = {
   removeEnrichment: async (name: string, source: string) => {
     await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/enrich/${encodeURIComponent(source)}`, { method: "DELETE" });
   },
+  addExtraction: (name: string, attr: string, type: string, values: string[]) =>
+    postJson<{ added?: string; error?: string; detail?: CollectionDetail }>(
+      `/api/collections/${encodeURIComponent(name)}/extract`, { name: attr, type, values }),
+  removeExtraction: async (name: string, attr: string) => {
+    await fetch(`${BASE}/api/collections/${encodeURIComponent(name)}/extract/${encodeURIComponent(attr)}`, { method: "DELETE" });
+  },
   setCollectionKey: (name: string, key: string) =>
     postJson<CollectionDetail>(`/api/collections/${encodeURIComponent(name)}/key`, { key }),
   addSampleToCollection: (name: string, sample: string) =>

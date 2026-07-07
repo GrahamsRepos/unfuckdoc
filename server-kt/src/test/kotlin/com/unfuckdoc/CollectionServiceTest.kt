@@ -8,6 +8,7 @@ import com.unfuckdoc.domain.Classifier
 import com.unfuckdoc.domain.Consolidator
 import com.unfuckdoc.domain.MiniLmEmbedder
 import com.unfuckdoc.domain.NoopEmbedder
+import com.unfuckdoc.domain.NoopLlm
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.domain.SemanticCanonicalizer
 import com.unfuckdoc.opensearch.OpenSearchService
@@ -36,7 +37,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            opensearch, NoopEmbedder,
+            opensearch, NoopEmbedder, NoopLlm,
         )
         service.create("contacts", "email")
 
@@ -70,7 +71,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            unavailableOpenSearch(), NoopEmbedder,
+            unavailableOpenSearch(), NoopEmbedder, NoopLlm,
         )
         service.create("accounts", "email")
 
@@ -117,7 +118,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            unavailableOpenSearch(), NoopEmbedder,
+            unavailableOpenSearch(), NoopEmbedder, NoopLlm,
         )
         service.create("deals", "email")
         service.add(
@@ -144,7 +145,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            unavailableOpenSearch(), NoopEmbedder,
+            unavailableOpenSearch(), NoopEmbedder, NoopLlm,
         )
         service.create("aud", "email")
         service.add(
@@ -173,7 +174,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            unavailableOpenSearch(), NoopEmbedder,
+            unavailableOpenSearch(), NoopEmbedder, NoopLlm,
         )
         service.create("dup", "email")
         service.add(
@@ -203,7 +204,7 @@ class CollectionServiceTest {
     fun `keyword search is punctuation and order independent`() {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
-            Consolidator(), unavailableOpenSearch(), NoopEmbedder,
+            Consolidator(), unavailableOpenSearch(), NoopEmbedder, NoopLlm,
         )
         service.create("props", "email")
         service.add("props", "p.csv", listOf("email", "description"), listOf(
@@ -222,7 +223,7 @@ class CollectionServiceTest {
     fun `semantic search ranks a free-text field by meaning, not keyword overlap`() {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), MiniLmEmbedder())),
-            Consolidator(), unavailableOpenSearch(), MiniLmEmbedder(),
+            Consolidator(), unavailableOpenSearch(), MiniLmEmbedder(), NoopLlm,
         )
         service.create("props", "email")
         service.add("props", "p.csv", listOf("email", "description"), listOf(
@@ -243,7 +244,7 @@ class CollectionServiceTest {
     fun `enrichment join attaches reference fields by a shared field, enabling geo search`() {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
-            Consolidator(), unavailableOpenSearch(), NoopEmbedder,
+            Consolidator(), unavailableOpenSearch(), NoopEmbedder, NoopLlm,
         )
         service.create("ppl", "email")
         service.add("ppl", "people.csv", listOf("email", "city"), listOf(
@@ -280,7 +281,7 @@ class CollectionServiceTest {
         val service = CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
             Consolidator(),
-            opensearch, NoopEmbedder,
+            opensearch, NoopEmbedder, NoopLlm,
         )
         service.create("keepme", "email")   // live -> index col_keepme
 

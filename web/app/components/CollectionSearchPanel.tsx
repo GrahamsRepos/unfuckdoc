@@ -25,6 +25,19 @@ export function CollectionSearchPanel({ detail, search }:
     values: s.values,
   }));
 
+  // LLM-extracted attributes render as visual badges in results (✓/✗ for boolean, pill otherwise)
+  const extracted = new Map((detail.extractions ?? []).map((e) => [e.name, e.os_type]));
+  function cell(col: string, val: string) {
+    if (!val) return <span className="mut">—</span>;
+    const t = extracted.get(col);
+    if (t === "boolean") {
+      const yes = val.toLowerCase() === "true";
+      return <span className={`attr ${yes ? "yes" : "no"}`}>{yes ? "✓" : "✗"} {col.replace(/_/g, " ")}</span>;
+    }
+    if (t) return <span className="attr pill">{val}</span>;   // extracted enum/text/number
+    return val;
+  }
+
   function apply(np: URLSearchParams) { setParams(np, { preventScrollReset: true }); }
   function runSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -123,7 +136,7 @@ export function CollectionSearchPanel({ detail, search }:
                             </span>
                           </td>
                         ) : null}
-                        {search.display.map((c) => <td key={c}>{r[c] ? r[c] : <span className="mut">—</span>}</td>)}
+                        {search.display.map((c) => <td key={c}>{cell(c, r[c])}</td>)}
                       </tr>
                     ))}
                   </tbody>

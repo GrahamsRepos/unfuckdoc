@@ -47,6 +47,7 @@ import java.io.File
 @Serializable data class MappingOverrideRequest(val column: String, val canonical: String = "")
 @Serializable data class CustomCanonicalRequest(val name: String, val type: String = "keyword", val array: Boolean = false)
 @Serializable data class EnrichRequest(val source: String = "", val collection: String = "", val joinField: String)
+@Serializable data class ExtractRequest(val name: String, val type: String = "keyword", val values: List<String> = emptyList())
 @Serializable data class CollectionKeyRequest(val key: String)
 @Serializable data class MatchCandidatesRequest(val a: String, val b: String)
 @Serializable data class MatchRequest(val a: String, val b: String, val key: String? = null, val threshold: Double = 0.85)
@@ -155,6 +156,15 @@ class ApiController @Inject constructor(
             val req = call.receive<CollectionSearchRequest>()
             call.respond(collections.search(call.parameters["name"]!!, req.q, req.tag, req.sourceFiles, req.filters, req.size, req.page, req.geo, req.mode)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
+        }
+
+        post("/api/collections/{name}/extract") {
+            val req = call.receive<ExtractRequest>()
+            call.respond(collections.addExtraction(call.parameters["name"]!!, req.name, req.type, req.values))
+        }
+        delete("/api/collections/{name}/extract/{attr}") {
+            call.respond(collections.removeExtraction(call.parameters["name"]!!, call.parameters["attr"]!!)
+                ?: return@delete call.respond(HttpStatusCode.NotFound, mapOf("error" to "unknown collection")))
         }
 
         post("/api/collections/{name}/enrich") {

@@ -6,6 +6,7 @@ import com.unfuckdoc.domain.Canonicalizer
 import com.unfuckdoc.domain.Classifier
 import com.unfuckdoc.domain.Consolidator
 import com.unfuckdoc.domain.NoopEmbedder
+import com.unfuckdoc.domain.NoopLlm
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.domain.SemanticCanonicalizer
 import com.unfuckdoc.opensearch.OpenSearchService
@@ -20,7 +21,7 @@ class GeoTest {
         every { os.available() } returns false
         return CollectionService(
             Pipeline(Classifier(), SemanticCanonicalizer(Canonicalizer(), NoopEmbedder)),
-            Consolidator(), os, NoopEmbedder,
+            Consolidator(), os, NoopEmbedder, NoopLlm,
         )
     }
 

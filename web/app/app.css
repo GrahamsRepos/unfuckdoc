@@ -163,3 +163,10 @@ th { color: var(--mut); font-weight: 600; font-size: 11.5px; text-transform: upp
 .simbar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--acc); border-radius: 4px 0 0 4px; }
 .simbar-val { position: relative; margin-left: auto; padding-right: 5px; font-size: 10.5px;
   font-family: ui-monospace, Menlo, monospace; color: var(--ink); z-index: 1; }
+
+/* LLM-extracted attribute badges (search results) */
+.attr { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 1px 8px;
+  border-radius: 20px; white-space: nowrap; }
+.attr.yes { background: #12331f; color: #7ee787; }
+.attr.no  { background: #33121a; color: #ff9db3; }
+.attr.pill { background: #22203a; color: #c9b8ff; }

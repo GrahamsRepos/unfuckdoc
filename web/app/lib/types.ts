@@ -136,12 +136,14 @@ export interface CustomCanonical { name: string; os_type: string; array: boolean
 export interface GeoPoint { lat: number; lng: number; label: string; }
 export interface GeoFilter { field: string; bbox?: number[]; polygon?: number[][]; }
 export interface EnrichmentJoin { source: string; join_field: string; attached: string[]; matched: number; from_collection: boolean; }
+export interface ExtractedAttribute { name: string; os_type: string; values: string[]; filled: number; }
 export interface CollectionDetail {
   name: string; index: string; n_records: number;
   key_field: string; raw_records: number; merged: number;
   schema: SchemaField[]; files: CollectionFile[]; segments: Segment[]; opensearch: OsStatus;
   tags: CollectionTag[]; custom_canonicals: CustomCanonical[]; semantic_search: boolean;
   enrichments: EnrichmentJoin[];
+  extractions: ExtractedAttribute[]; llm_available: boolean;
 }
 export interface CollectionSearchResponse {
   display: string[]; count: number; total: number; page: number; page_size: number;

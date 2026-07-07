@@ -9,8 +9,11 @@ import com.unfuckdoc.domain.Consolidator
 import com.unfuckdoc.domain.CsvReader
 import com.unfuckdoc.domain.Embedder
 import com.unfuckdoc.domain.IndexBuilder
+import com.unfuckdoc.domain.LlmClient
 import com.unfuckdoc.domain.MiniLmEmbedder
 import com.unfuckdoc.domain.NoopEmbedder
+import com.unfuckdoc.domain.NoopLlm
+import com.unfuckdoc.domain.OpenAiChatClient
 import com.unfuckdoc.domain.OpenAiEmbedder
 import com.unfuckdoc.domain.Pipeline
 import com.unfuckdoc.domain.SemanticCanonicalizer
@@ -50,6 +53,13 @@ class AppModule : KotlinModule() {
             )
             else -> bind<Embedder>().to<MiniLmEmbedder>().`in`<Singleton>()
         }
+
+        // gated chat LLM (attribute extraction, NL→query): OpenAI-compatible endpoint via LLM_BASE_URL
+        val llmBase = System.getenv("LLM_BASE_URL")
+        if (llmBase != null)
+            bind<LlmClient>().toInstance(OpenAiChatClient(llmBase, System.getenv("LLM_MODEL") ?: "qwen2.5:7b", System.getenv("LLM_API_KEY")))
+        else
+            bind<LlmClient>().toInstance(NoopLlm)
 
         // constructed from env config
         bind<OpenSearchService>().toInstance(
