@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router";
 import type { CollectionDetail, CollectionSearchResponse, Facet, FieldFilter } from "~/lib/types";
-import { FieldFilterBar } from "./FieldFilterBar";
+import { TagPicker } from "./TagPicker";
 import { Dsl } from "./format";
 import { Pagination } from "./Pagination";
 
@@ -81,7 +81,7 @@ export function CollectionSearchPanel({ detail, search }:
         <input name="q" type="text" defaultValue={q} placeholder="keyword across all fields…" />
         <button className="btn" type="submit">Search</button>
       </form>
-      <FieldFilterBar facets={facets} filters={filters} onAdd={addFilter} onRemove={removeFilter} />
+      <TagPicker facets={facets} filters={filters} onAdd={addFilter} onRemove={removeFilter} />
 
       {search && (
         <div style={{ marginTop: 14 }}>

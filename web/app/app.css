@@ -128,3 +128,16 @@ th { color: var(--mut); font-weight: 600; font-size: 11.5px; text-transform: upp
 .step-label { font-weight: 600; font-size: 13px; }
 .step-label small { font-weight: 400; }
 .step-arrow { color: var(--line); margin-left: 4px; }
+
+/* two-stage tag picker (Explore filters) */
+.tagpicker { display: flex; flex-direction: column; gap: 10px; }
+.chip.toggle, .kw.toggle { cursor: pointer; border: 1px solid transparent; }
+.chip.toggle:hover, .kw.toggle:hover { border-color: var(--line); }
+.chip.toggle.on { background: var(--acc); color: #06121f; }
+.chip.toggle.on b, .chip.toggle.on .mut { color: #06121f; }
+.kw.toggle.on { background: #6f42c1; color: #fff; }
+.kw.toggle.on .mut { color: #e6d8ff; }
+.tag-group { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.tag-group-name { min-width: 110px; color: var(--ink); font-weight: 600; font-size: 13px; padding-top: 2px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.range-in { flex: 1; min-width: 220px; }
