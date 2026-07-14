@@ -41,6 +41,53 @@ A **collection** is the unit of work — dump files, get one deduped, standardis
 
 **Guiding principle: deterministic-first, models only on the ambiguous residual, always gated + counted.**
 
+## How unification works (and where the model actually is)
+
+A column merges with another **only if it resolves to the same canonical name**. That name is decided
+by a 4-tier, first-match-wins, **type-gated** cascade — and **only one tier uses a model**: the
+semantic field-*name* match (embed the name, cosine to the nearest type-compatible canonical). The
+**`Consolidator` uses no model at all** — it groups columns by exact canonical-string equality, then
+decides scalar-vs-array by **string prefix/suffix + fill co-occupancy statistics**, and combines
+values by **exact dedup + survivorship**. (Its internal `style="semantic"` is a naming clash — it just
+means the slot labels are words like `Work`/`Home`, not embeddings.)
+
+```mermaid
+flowchart TD
+    F["messy files"] --> P["parse · sniff delimiter"]
+    P --> TX["row transforms<br/>(safe DSL)"]
+    TX --> CL["classify column type<br/>(statistical)"]
+    CL --> AL{"canonicalize the field NAME"}
+    AL -->|"1 · manual override"| CN["canonical name"]
+    AL -->|"2 · alias dictionary<br/>(token match)"| CN
+    AL -->|"3 · semantic match<br/>(embedding · cosine, gated)"| SEM["🧠 embedder"] --> CN
+    AL -->|"4 · identity fallback"| CN
+
+    CN --> GRP["group columns by<br/>canonical string (exact ==)"]
+    GRP --> SHP["decide shape: scalar vs array<br/>LCP stem + fill co-occupancy"]
+    SHP --> CMB["combine values<br/>survivorship · tagged array"]
+    CMB --> MRG["merge entities by key<br/>dedupe · conflict → array + flag"]
+
+    MRG --> IDX["typed fields → OpenSearch / filters"]
+    MRG --> VEC["free text → vector"] --> E2["🧠 embedder"]
+    MRG --> LLM["free text → attributes"] --> L2["🧠 qwen"]
+
+    classDef det fill:#e7f0e7,stroke:#3a7a4a,color:#12281a;
+    classDef mdl fill:#efe6f7,stroke:#7a4a99,color:#241833;
+    class P,TX,CL,GRP,SHP,CMB,MRG,IDX,CN det;
+    class SEM,VEC,E2,LLM,L2 mdl;
+```
+
+**Green = deterministic (no model). Purple = model.** The embedder is used *once on the field name*
+(the ambiguous residual the dictionary can't place) and *once on free text* (for vector search); the
+LLM is used only for structured attribute extraction. The merge itself — grouping, shape, value
+combination, entity dedup — is pure statistics, reproducible, and model-free.
+
+**Shape decision (scalar vs array), in one line:** columns that fill *different* cells in the *same*
+row are **slots** → array (`Mobile`/`Work`/`Home Phone` → `phone: [{type,value}…]`); columns that fill
+the *same* cell from *different* sources are **synonyms** → scalar (`Email`/`work_email` → one `email`).
+Conflicting scalar values across the same entity key are **collected into an array and flagged**, never
+silently dropped.
+
 ## Quickstart (all local, all free models)
 
 > Detailed step-by-step (prerequisites, Ollama, env vars, troubleshooting): **[`SETUP.md`](SETUP.md)**.
